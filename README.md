@@ -1,3 +1,5 @@
+[![codecov](https://codecov.io/github/rv1nc3nt/eur-lex-loader/graph/badge.svg?token=9TA1JUZKRF)](https://codecov.io/github/rv1nc3nt/eur-lex-loader)
+
 # eur-lex-loader
 
 A Rust crate for working with EU legislative acts published in
