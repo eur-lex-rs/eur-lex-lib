@@ -5,7 +5,7 @@
 use std::path::Path;
 
 use eur_lex_loader::loader::load_act;
-use eur_lex_loader::model::{Act, AnnexContent, ChapterContents, CitedActType, Citation, Item, ItemContent, ListBlock, OjRef, Subparagraph};
+use eur_lex_loader::model::{Act, AnnexContent, ChapterContents, CitedActType, Citation, Item, ItemContent, OfficialJournal, OjRef, Subparagraph};
 
 #[test]
 fn eu_ai_act_structure() {
@@ -214,4 +214,25 @@ fn eu_ai_act_recital_citations() {
     for c in r14 {
         assert!(c.oj_ref.is_none(), "recital (14): all citations should be inline (no OJ ref), found {:?}", c);
     }
+}
+
+#[test]
+fn eu_ai_act_metadata() {
+    let act = load_act(Path::new("data/32024R1689"))
+        .expect("failed to load EU AI Act from data/32024R1689");
+    let Act::Regular(reg) = act else { panic!("EU AI Act should be a Regular act") };
+    let md = &reg.metadata;
+
+    assert_eq!(md.prod_id.as_deref(), Some("20240611006"));
+    assert_eq!(md.fin_id.as_deref(), Some("498503"));
+    assert!(md.authors.is_empty(), "EU AI Act BIB.DOC has no AUTHOR elements");
+    assert!(md.eea_relevant, "EU AI Act should be EEA relevant");
+
+    let oj = md.official_journal.as_ref().expect("official_journal should be present");
+    assert_eq!(*oj, OfficialJournal {
+        collection: "L".to_string(),
+        number: String::new(),
+        date: "20240712".to_string(),
+        language: "EN".to_string(),
+    });
 }

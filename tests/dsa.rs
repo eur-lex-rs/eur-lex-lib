@@ -5,7 +5,7 @@
 use std::path::Path;
 
 use eur_lex_loader::loader::load_act;
-use eur_lex_loader::model::{Act, ChapterContents, Item, ItemContent, Subparagraph};
+use eur_lex_loader::model::{Act, ChapterContents, Item, ItemContent, OfficialJournal, Subparagraph};
 
 #[test]
 fn dsa_structure() {
@@ -176,4 +176,24 @@ fn dsa_structure() {
         reg.definitions.contains_key("intermediary service"),
         "definitions should contain 'intermediary service'"
     );
+}
+
+#[test]
+fn dsa_metadata() {
+    let act = load_act(Path::new("data/32022R2065")).expect("failed to load DSA from data/32022R2065");
+    let Act::Regular(reg) = act else { panic!("DSA should be a Regular act") };
+    let md = &reg.metadata;
+
+    assert_eq!(md.prod_id.as_deref(), Some("20221017018"));
+    assert_eq!(md.fin_id.as_deref(), Some("411219"));
+    assert_eq!(md.authors, vec!["CONSIL"]);
+    assert!(!md.eea_relevant, "DSA BIB.DOC has no EEA element");
+
+    let oj = md.official_journal.as_ref().expect("official_journal should be present");
+    assert_eq!(*oj, OfficialJournal {
+        collection: "L".to_string(),
+        number: "277".to_string(),
+        date: "20221027".to_string(),
+        language: "EN".to_string(),
+    });
 }

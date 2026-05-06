@@ -172,7 +172,7 @@ fn parse_doc_file(doc_file: &Path) -> Result<(Metadata, String, Vec<String>), Er
     let mut authors: Vec<String> = Vec::new();
     let mut eea_relevant = false;
 
-    if let Some(bib) = fmx.children().find(|n| n.is_element() && n.tag_name().name() == "BIB.DOC") {
+    if let Some(bib) = root.children().find(|n| n.is_element() && n.tag_name().name() == "BIB.DOC") {
         for child in bib.children().filter(|n| n.is_element()) {
             match child.tag_name().name() {
                 "PROD.ID" => prod_id = Some(child.text().unwrap_or_default().to_string()),
@@ -185,7 +185,7 @@ fn parse_doc_file(doc_file: &Path) -> Result<(Metadata, String, Vec<String>), Er
     }
 
     // ── PUBLICATION.REF ───────────────────────────────────────────────────────
-    let official_journal = fmx
+    let official_journal = root
         .children()
         .find(|n| n.is_element() && n.tag_name().name() == "PUBLICATION.REF")
         .map(|pub_ref| {

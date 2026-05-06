@@ -6,7 +6,7 @@
 use std::path::Path;
 
 use eur_lex_loader::loader::load_act;
-use eur_lex_loader::model::{Act, ChapterContents, Item, ItemContent, Subparagraph};
+use eur_lex_loader::model::{Act, ChapterContents, Item, ItemContent, OfficialJournal, Subparagraph};
 
 #[test]
 fn dsma_structure() {
@@ -129,4 +129,25 @@ fn dsma_structure() {
         reg.definitions.contains_key("press publication"),
         "definitions should contain 'press publication'"
     );
+}
+
+#[test]
+fn dsma_metadata() {
+    let act = load_act(Path::new("data/32019L0790"))
+        .expect("failed to load DSMA from data/32019L0790");
+    let Act::Regular(reg) = act else { panic!("DSMA should be a Regular act") };
+    let md = &reg.metadata;
+
+    assert_eq!(md.prod_id.as_deref(), Some("20190416015"));
+    assert_eq!(md.fin_id.as_deref(), Some("250134"));
+    assert_eq!(md.authors, vec!["PE", "CS"]);
+    assert!(md.eea_relevant, "DSMA should be EEA relevant");
+
+    let oj = md.official_journal.as_ref().expect("official_journal should be present");
+    assert_eq!(*oj, OfficialJournal {
+        collection: "L".to_string(),
+        number: "130".to_string(),
+        date: "20190517".to_string(),
+        language: "EN".to_string(),
+    });
 }

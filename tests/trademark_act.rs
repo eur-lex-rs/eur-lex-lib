@@ -6,7 +6,7 @@
 use std::path::Path;
 
 use eur_lex_loader::loader::load_act;
-use eur_lex_loader::model::{Act, AnnexContent, ChapterContents, CitedActType, Citation, Item, ItemContent, OjRef, Subparagraph};
+use eur_lex_loader::model::{Act, AnnexContent, ChapterContents, CitedActType, Citation, Item, ItemContent, OfficialJournal, OjRef, Subparagraph};
 
 #[test]
 fn trademark_act_structure() {
@@ -187,4 +187,25 @@ fn trademark_act_recital_citations() {
     let eu_608_inline: Vec<_> = r18.iter().filter(|c| c.number == "608/2013").collect();
     assert_eq!(eu_608_inline.len(), 1, "recital (18): should have exactly one 608/2013 citation");
     assert!(eu_608_inline[0].oj_ref.is_none(), "recital (18): inline-only citation must have no OJ ref");
+}
+
+#[test]
+fn trademark_act_metadata() {
+    let act = load_act(Path::new("data/32017R1001"))
+        .expect("failed to load Trademark Act from data/32017R1001");
+    let Act::Regular(reg) = act else { panic!("Trademark Act should be a Regular act") };
+    let md = &reg.metadata;
+
+    assert_eq!(md.prod_id.as_deref(), Some("20170608012"));
+    assert_eq!(md.fin_id.as_deref(), Some("119541"));
+    assert_eq!(md.authors, vec!["PE", "CS"]);
+    assert!(md.eea_relevant, "Trademark Act should be EEA relevant");
+
+    let oj = md.official_journal.as_ref().expect("official_journal should be present");
+    assert_eq!(*oj, OfficialJournal {
+        collection: "L".to_string(),
+        number: "154".to_string(),
+        date: "20170616".to_string(),
+        language: "EN".to_string(),
+    });
 }
