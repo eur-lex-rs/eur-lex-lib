@@ -447,3 +447,182 @@ pub struct Annex {
     /// Top-level content: either titled sections or flat paragraphs.
     pub content: AnnexContent,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn meta() -> Metadata {
+        Metadata {
+            celex: None,
+            document_date: None,
+            legal_value: None,
+            language: None,
+            authors: vec![],
+            eea_relevant: false,
+            official_journal: None,
+            page_first: None,
+            page_last: None,
+            page_total: None,
+            prod_id: None,
+            fin_id: None,
+        }
+    }
+
+    fn empty_enacting_terms() -> EnactingTerms {
+        EnactingTerms { chapters: vec![] }
+    }
+
+    fn regular_act(title: &str) -> Act {
+        Act::Regular(RegularAct {
+            metadata: meta(),
+            title: title.into(),
+            preamble: Preamble {
+                init: String::new(),
+                visas: vec![],
+                recitals: vec![],
+                enacting_formula: String::new(),
+            },
+            enacting_terms: empty_enacting_terms(),
+            annexes: vec![],
+            definitions: HashMap::new(),
+        })
+    }
+
+    fn consolidated_act(title: &str) -> Act {
+        Act::Consolidated(ConsolidatedAct {
+            metadata: meta(),
+            title: title.into(),
+            preamble: ConsolidatedPreamble {
+                init: String::new(),
+                enacting_formula: String::new(),
+            },
+            enacting_terms: empty_enacting_terms(),
+            annexes: vec![],
+            definitions: HashMap::new(),
+        })
+    }
+
+    // ── title() ───────────────────────────────────────────────────────────────
+
+    #[test]
+    fn title_regular() {
+        let act = regular_act("Regulation (EU) 2024/1689");
+        assert_eq!(act.title(), "Regulation (EU) 2024/1689");
+    }
+
+    #[test]
+    fn title_consolidated() {
+        let act = consolidated_act("Regulation (EU) 2017/1001");
+        assert_eq!(act.title(), "Regulation (EU) 2017/1001");
+    }
+
+    // ── metadata() ────────────────────────────────────────────────────────────
+
+    #[test]
+    fn metadata_regular_celex() {
+        let mut act = regular_act("");
+        if let Act::Regular(ref mut r) = act {
+            r.metadata.celex = Some("32024R1689".into());
+        }
+        assert_eq!(act.metadata().celex.as_deref(), Some("32024R1689"));
+    }
+
+    #[test]
+    fn metadata_consolidated_eea_relevant() {
+        let mut act = consolidated_act("");
+        if let Act::Consolidated(ref mut c) = act {
+            c.metadata.eea_relevant = true;
+        }
+        assert!(act.metadata().eea_relevant);
+    }
+
+    // ── enacting_terms() ──────────────────────────────────────────────────────
+
+    #[test]
+    fn enacting_terms_regular_empty_chapters() {
+        let act = regular_act("");
+        assert!(act.enacting_terms().chapters.is_empty());
+    }
+
+    #[test]
+    fn enacting_terms_consolidated_empty_chapters() {
+        let act = consolidated_act("");
+        assert!(act.enacting_terms().chapters.is_empty());
+    }
+
+    // ── annexes() ─────────────────────────────────────────────────────────────
+
+    #[test]
+    fn annexes_regular_empty() {
+        let act = regular_act("");
+        assert!(act.annexes().is_empty());
+    }
+
+    #[test]
+    fn annexes_consolidated_empty() {
+        let act = consolidated_act("");
+        assert!(act.annexes().is_empty());
+    }
+
+    #[test]
+    fn annexes_regular_populated() {
+        let mut act = regular_act("");
+        if let Act::Regular(ref mut r) = act {
+            r.annexes.push(Annex {
+                number: "ANNEX I".into(),
+                subtitle: None,
+                content: AnnexContent::Paragraphs(vec![]),
+            });
+        }
+        assert_eq!(act.annexes().len(), 1);
+        assert_eq!(act.annexes()[0].number, "ANNEX I");
+    }
+
+    #[test]
+    fn annexes_consolidated_populated() {
+        let mut act = consolidated_act("");
+        if let Act::Consolidated(ref mut c) = act {
+            c.annexes.push(Annex {
+                number: "ANNEX II".into(),
+                subtitle: Some("Technical requirements".into()),
+                content: AnnexContent::Paragraphs(vec![]),
+            });
+        }
+        assert_eq!(act.annexes().len(), 1);
+        assert_eq!(act.annexes()[0].number, "ANNEX II");
+        assert_eq!(act.annexes()[0].subtitle.as_deref(), Some("Technical requirements"));
+    }
+
+    // ── definitions() ─────────────────────────────────────────────────────────
+
+    #[test]
+    fn definitions_regular_empty() {
+        let act = regular_act("");
+        assert!(act.definitions().is_empty());
+    }
+
+    #[test]
+    fn definitions_consolidated_empty() {
+        let act = consolidated_act("");
+        assert!(act.definitions().is_empty());
+    }
+
+    #[test]
+    fn definitions_regular_populated() {
+        let mut act = regular_act("");
+        if let Act::Regular(ref mut r) = act {
+            r.definitions.insert("AI system".into(), "a machine-based system…".into());
+        }
+        assert_eq!(act.definitions().get("AI system").map(String::as_str), Some("a machine-based system…"));
+    }
+
+    #[test]
+    fn definitions_consolidated_populated() {
+        let mut act = consolidated_act("");
+        if let Act::Consolidated(ref mut c) = act {
+            c.definitions.insert("trade mark".into(), "a sign capable of…".into());
+        }
+        assert_eq!(act.definitions().get("trade mark").map(String::as_str), Some("a sign capable of…"));
+    }
+}
