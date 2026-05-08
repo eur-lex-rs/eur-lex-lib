@@ -303,7 +303,7 @@ an original or a consolidated version.
                   "number": "1.",
                   "alineas": [
                     // A plain paragraph:
-                    { "Text": { "text": "The purpose of this Regulation …" } },
+                    { "Plain": "The purpose of this Regulation …" },
                     // A <P> intro + <LIST> collapsed into a single List block:
                     { "List": {
                         "list_type": "alpha",
@@ -345,13 +345,13 @@ an original or a consolidated version.
                 }
               ] },
               // 2. Alineas — bare <ALINEA> children, no <PARAG> wrapper
-              // "content": { "Alineas": [ { "content": [ { "Text": "…" } ] } ] },
+              // "content": { "Alineas": [ { "content": [ { "Plain": "…" } ] } ] },
               // 3. Subdivisions — <SUBDIV> thematic groups, each with a title
               // "content": { "Subdivisions": [
               //   {
               //     "title": "NORMAL VALUE",
               //     "content": { "Paragraphs": [
-              //       { "number": "1.", "alineas": [ { "content": [ { "Text": "…" } ] } ] }
+              //       { "number": "1.", "alineas": [ { "content": [ { "Plain": "…" } ] } ] }
               //     ] }
               //   },
               //   {
@@ -379,7 +379,7 @@ an original or a consolidated version.
           {
             "title": "Part A",
             "alineas": [
-              { "Text": "…" },
+              { "Plain": "…" },
               { "List": { "list_type": "alpha", "intro": "…", "items": [
                   { "number": 1, "content": { "Text": "…" } }
               ] } },
@@ -390,12 +390,14 @@ an original or a consolidated version.
           }
         ]
       }
-      // Annexes with flat numbered items, plain text, or tables use Paragraphs:
+      // Annexes with flat numbered items, plain text, or tables use Paragraphs —
+      // a flat Vec<Subparagraph> mixing Numbered (<NP>), Plain (<P>), List, Table:
       // "content": {
       //   "Paragraphs": [
-      //     { "number": "1.", "alineas": [ { "Text": "…" } ] },
-      //     { "number": "2.", "alineas": [ { "List": { "intro": "…", "items": [ { "number": 1, "content": { "Text": "…" } } ] } } ] },
-      //     { "number": null, "alineas": [ { "Table": { "col_count": 3, "row_count": 5, "rows": [ "…" ] } } ] }
+      //     { "Plain": "Introductory text …" },
+      //     { "Numbered": { "number": "1.", "alineas": [ { "Plain": "…" } ] } },
+      //     { "Numbered": { "number": "2.", "alineas": [ { "List": { "intro": "…", "items": [ { "number": 1, "content": { "Text": "…" } } ] } } ] } },
+      //     { "Table": { "col_count": 3, "row_count": 5, "rows": [ "…" ] } }
       //   ]
       // }
     }

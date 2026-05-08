@@ -64,11 +64,7 @@ fn reach_regulation_structure() {
         .find(|a| a.number.contains("ANNEX IV"))
         .expect("ANNEX IV not found");
     let has_table = match &annex_iv.content {
-        AnnexContent::Paragraphs(paras) => paras.iter().any(|p| {
-            p.subparagraphs()
-                .iter()
-                .any(|a| matches!(a, Subparagraph::Table(_)))
-        }),
+        AnnexContent::Paragraphs(paras) => paras.iter().any(|p| matches!(p, Subparagraph::Table(_))),
         AnnexContent::Sections(secs) => secs.iter().any(|s| {
             s.alineas
                 .iter()

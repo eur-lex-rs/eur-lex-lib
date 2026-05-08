@@ -111,7 +111,7 @@ fn eu_ai_act_structure() {
         "Article 5 para 1 should have 2 alineas"
     );
     assert!(
-        matches!(&para1.alineas[1].content[0], Subparagraph::Text(_)),
+        matches!(&para1.alineas[1].content[0], Subparagraph::Plain(_)),
         "Article 5 para 1 alineas[1].content[0] should be trailing plain Text"
     );
     match &para1.alineas[0].content[0] {
@@ -168,7 +168,6 @@ fn eu_ai_act_structure() {
     };
     let iii_list = iii_paragraphs
         .iter()
-        .flat_map(|p| p.subparagraphs().iter())
         .find_map(|b| {
             if let Subparagraph::List(lb) = b {
                 Some(lb)
@@ -218,7 +217,6 @@ fn eu_ai_act_structure() {
     };
     let iv_list = iv_paragraphs
         .iter()
-        .flat_map(|p| p.subparagraphs().iter())
         .find_map(|b| {
             if let Subparagraph::List(lb) = b {
                 Some(lb)

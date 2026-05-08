@@ -379,43 +379,15 @@ pub struct PhysicalNumberedParagraph {
     pub citations: Vec<Citation>,
 }
 
-/// An unnumbered physical paragraph (`<P>`).
-///
-/// A `<P>` element carries no number. Its content is one or more block
-/// elements (plain text, list, or table).
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
-pub struct PhysicalParagraph {
-    /// Block content of this paragraph.
-    pub content: Vec<Subparagraph>,
-    /// Structured citations to other EU acts found in this paragraph.
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub citations: Vec<Citation>,
-}
 
-/// An item in the flat paragraph sequence of an annex.
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
-pub enum AnnexParagraph {
-    /// A numbered paragraph from a `<NP>` element.
-    Numbered(PhysicalNumberedParagraph),
-    /// An unnumbered paragraph from a `<P>` element (or accumulated block content).
-    Plain(PhysicalParagraph),
-}
-
-impl AnnexParagraph {
-    /// Returns the content blocks of this paragraph regardless of variant.
-    pub fn subparagraphs(&self) -> &[Subparagraph] {
-        match self {
-            AnnexParagraph::Numbered(np) => &np.alineas,
-            AnnexParagraph::Plain(pp) => &pp.content,
-        }
-    }
-}
-
-/// A content element within an [`Alinea`], [`PhysicalNumberedParagraph`], [`PhysicalParagraph`], or [`AnnexSection`].
+/// A content element within an [`Alinea`], [`PhysicalNumberedParagraph`], or [`AnnexSection`],
+/// or a top-level item in [`AnnexContent::Paragraphs`].
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub enum Subparagraph {
-    /// Plain text block (a bare `<P>` or `<ALINEA>`).
-    Text(String),
+    /// A numbered physical paragraph from an `<NP>` element (annex content only).
+    Numbered(PhysicalNumberedParagraph),
+    /// Plain text block (a bare `<P>` or inline text).
+    Plain(String),
     /// A list (`<LIST>`), with an optional intro and its items.
     List(ListBlock),
     /// A table parsed from a `<GR.TBL>` or `<TBL>` element.
@@ -526,8 +498,9 @@ pub struct AnnexSection {
 pub enum AnnexContent {
     /// The annex is divided into titled sections (`<GR.SEQ>`).
     Sections(Vec<AnnexSection>),
-    /// The annex contains flat content: numbered paragraphs, lists, or plain text.
-    Paragraphs(Vec<AnnexParagraph>),
+    /// The annex contains flat content: a sequence of [`Subparagraph`] items
+    /// (`Numbered` for `<NP>`, `Plain` for bare `<P>`, `List`, `Table`).
+    Paragraphs(Vec<Subparagraph>),
 }
 
 /// A parsed annex file (`<ANNEX>`).

@@ -214,7 +214,7 @@ pub(crate) fn parse_block_children(node: Node) -> Vec<Subparagraph> {
                     .collect();
                 if !nested_blocks.is_empty() {
                     if let Some(t) = pending.take() {
-                        result.push(Subparagraph::Text(t));
+                        result.push(Subparagraph::Plain(t));
                     }
                     for block in nested_blocks {
                         match block.tag_name().name() {
@@ -228,7 +228,7 @@ pub(crate) fn parse_block_children(node: Node) -> Vec<Subparagraph> {
                     }
                 } else {
                     if let Some(t) = pending.take() {
-                        result.push(Subparagraph::Text(t));
+                        result.push(Subparagraph::Plain(t));
                     }
                     let t = extract_text(child);
                     if !t.is_empty() {
@@ -246,7 +246,7 @@ pub(crate) fn parse_block_children(node: Node) -> Vec<Subparagraph> {
             }
             "NP" => {
                 if let Some(t) = pending.take() {
-                    result.push(Subparagraph::Text(t));
+                    result.push(Subparagraph::Plain(t));
                 }
                 // <TXT> is the standard body; fall back to the full <NP> text when absent.
                 let text = child
@@ -254,20 +254,20 @@ pub(crate) fn parse_block_children(node: Node) -> Vec<Subparagraph> {
                     .find(|n| n.is_element() && n.tag_name().name() == "TXT")
                     .map(extract_text)
                     .unwrap_or_else(|| extract_text(child));
-                result.push(Subparagraph::Text(text));
+                result.push(Subparagraph::Plain(text));
             }
             "TITLE" => {
                 // Structural title elements are extracted by callers; skip here.
             }
             "GR.TBL" => {
                 if let Some(t) = pending.take() {
-                    result.push(Subparagraph::Text(t));
+                    result.push(Subparagraph::Plain(t));
                 }
                 result.extend(parse_table(child));
             }
             "TBL" => {
                 if let Some(t) = pending.take() {
-                    result.push(Subparagraph::Text(t));
+                    result.push(Subparagraph::Plain(t));
                 }
                 result.push(parse_single_tbl(child));
             }
@@ -276,7 +276,7 @@ pub(crate) fn parse_block_children(node: Node) -> Vec<Subparagraph> {
                 // reduced to their text content. Structure is lost but no text
                 // is silently dropped.
                 if let Some(t) = pending.take() {
-                    result.push(Subparagraph::Text(t));
+                    result.push(Subparagraph::Plain(t));
                 }
                 let t = extract_text(child);
                 if !t.is_empty() {
@@ -287,13 +287,13 @@ pub(crate) fn parse_block_children(node: Node) -> Vec<Subparagraph> {
     }
     // Flush any trailing <P> not followed by a <LIST>.
     if let Some(t) = pending {
-        result.push(Subparagraph::Text(t));
+        result.push(Subparagraph::Plain(t));
     }
     // Pure inline node — wrap the whole text as a single Text block.
     if result.is_empty() {
         let t = extract_text(node);
         if !t.is_empty() {
-            result.push(Subparagraph::Text(t));
+            result.push(Subparagraph::Plain(t));
         }
     }
     result

@@ -609,7 +609,7 @@ mod tests {
         assert_eq!(paras.len(), 2);
         assert_eq!(paras[0].number, "1.");
         assert!(matches!(&paras[1].alineas[0].content[0],
-            Subparagraph::Text(t) if t == "Second paragraph."));
+            Subparagraph::Plain(t) if t == "Second paragraph."));
     }
 
     #[test]
@@ -627,7 +627,7 @@ mod tests {
             panic!("expected Alineas");
         };
         assert_eq!(alineas.len(), 1);
-        assert!(matches!(&alineas[0].content[0], Subparagraph::Text(t) if t == "Only text."));
+        assert!(matches!(&alineas[0].content[0], Subparagraph::Plain(t) if t == "Only text."));
     }
 
     #[test]
@@ -705,7 +705,7 @@ mod tests {
             }
             _ => panic!("expected List at alineas[0].content[0]"),
         }
-        assert!(matches!(&alineas[1].content[0], Subparagraph::Text(t) if t.contains("prejudice")));
+        assert!(matches!(&alineas[1].content[0], Subparagraph::Plain(t) if t.contains("prejudice")));
     }
 
     #[test]

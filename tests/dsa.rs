@@ -75,7 +75,7 @@ fn dsa_structure() {
     assert_eq!(p1.number, "1.");
     assert_eq!(p1.alineas.len(), 1, "Article 1 para 1 should have 1 alinea");
     assert!(
-        matches!(&p1.alineas[0].content[0], Subparagraph::Text(_)),
+        matches!(&p1.alineas[0].content[0], Subparagraph::Plain(_)),
         "Article 1 para 1 alineas[0].content[0] should be a plain Text"
     );
 

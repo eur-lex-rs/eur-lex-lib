@@ -72,11 +72,7 @@ fn consumer_directive_structure() {
 
     // Annex II contains the GR.TBL correlation table → at least one Table subparagraph.
     if let AnnexContent::Paragraphs(paras) = &act.annexes[1].content {
-        let has_table = paras.iter().any(|p| {
-            p.subparagraphs()
-                .iter()
-                .any(|a| matches!(a, Subparagraph::Table(_)))
-        });
+        let has_table = paras.iter().any(|p| matches!(p, Subparagraph::Table(_)));
         assert!(
             has_table,
             "ANNEX II should contain at least one Table subparagraph"

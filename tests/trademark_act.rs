@@ -86,7 +86,7 @@ fn trademark_act_structure() {
     assert_eq!(art1_paras[0].alineas.len(), 1);
     assert!(matches!(
         &art1_paras[0].alineas[0].content[0],
-        Subparagraph::Text(_)
+        Subparagraph::Plain(_)
     ));
 
     // Article 3 ("Capacity to act"): bare <ALINEA> (plain text, no block children)
@@ -97,7 +97,7 @@ fn trademark_act_structure() {
         panic!("Article 3 should have Alineas content");
     };
     assert_eq!(art3_alineas.len(), 1);
-    assert!(matches!(&art3_alineas[0].content[0], Subparagraph::Text(_)));
+    assert!(matches!(&art3_alineas[0].content[0], Subparagraph::Plain(_)));
 
     // Chapter II (idx 1): 4 sections.
     let ch2_secs = match &chapters[1].contents {

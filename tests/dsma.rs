@@ -71,7 +71,7 @@ fn dsma_structure() {
     assert_eq!(art1_paras[0].alineas.len(), 1);
     assert!(matches!(
         &art1_paras[0].alineas[0].content[0],
-        Subparagraph::Text(_)
+        Subparagraph::Plain(_)
     ));
 
     // Article 2 ("Definitions"): bare <ALINEA> with <P> intro + <LIST> (6 items)

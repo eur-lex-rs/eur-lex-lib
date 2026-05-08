@@ -118,36 +118,23 @@ fn parse_annex_sections(node: Node) -> Vec<AnnexSection> {
         .collect()
 }
 
-/// Parses flat annex content as a sequence of [`AnnexParagraph`]s.
+/// Parses flat annex content as a sequence of [`Subparagraph`]s.
 ///
-/// Each top-level `<NP>` becomes a [`PhysicalNumberedParagraph`] with its `<NO.P>`
-/// as the number and its `<TXT>` / nested `<P><LIST>` as alineas.  Runs of `<P>`,
-/// `<LIST>`, `<TBL>`, and `<GR.TBL>` between `<NP>` elements are collected into a
-/// [`PhysicalParagraph`].
-fn parse_annex_paragraphs(node: Node) -> Vec<AnnexParagraph> {
-    let mut result: Vec<AnnexParagraph> = Vec::new();
-    let mut pending_alineas: Vec<Subparagraph> = Vec::new();
+/// Each top-level `<NP>` becomes [`Subparagraph::Numbered`]. Bare `<P>` text
+/// becomes [`Subparagraph::Plain`]; a `<P>` text immediately preceding a sibling
+/// `<LIST>` is absorbed into [`ListBlock::intro`]. `<LIST>`, `<TBL>`, and `<GR.TBL>`
+/// become `List` and `Table` items directly.
+fn parse_annex_paragraphs(node: Node) -> Vec<Subparagraph> {
+    let mut result: Vec<Subparagraph> = Vec::new();
     let mut pending_intro: Option<String> = None;
-
-    let flush_pending = |result: &mut Vec<AnnexParagraph>,
-                         alineas: &mut Vec<Subparagraph>,
-                         intro: &mut Option<String>| {
-        if let Some(t) = intro.take() {
-            alineas.push(Subparagraph::Text(t));
-        }
-        if !alineas.is_empty() {
-            result.push(AnnexParagraph::Plain(PhysicalParagraph {
-                content: std::mem::take(alineas),
-                citations: vec![],
-            }));
-        }
-    };
 
     for elem in node.children().filter(|n| n.is_element()) {
         match elem.tag_name().name() {
             "NP" => {
-                flush_pending(&mut result, &mut pending_alineas, &mut pending_intro);
-                result.push(AnnexParagraph::Numbered(np_to_physical_numbered_paragraph(elem)));
+                if let Some(t) = pending_intro.take() {
+                    result.push(Subparagraph::Plain(t));
+                }
+                result.push(Subparagraph::Numbered(np_to_physical_numbered_paragraph(elem)));
             }
             "P" => {
                 let nested_blocks: Vec<_> = elem
@@ -156,21 +143,21 @@ fn parse_annex_paragraphs(node: Node) -> Vec<AnnexParagraph> {
                     .collect();
                 if !nested_blocks.is_empty() {
                     if let Some(t) = pending_intro.take() {
-                        pending_alineas.push(Subparagraph::Text(t));
+                        result.push(Subparagraph::Plain(t));
                     }
                     for block in nested_blocks {
                         match block.tag_name().name() {
-                            "LIST" => pending_alineas.push(Subparagraph::List(ListBlock {
+                            "LIST" => result.push(Subparagraph::List(ListBlock {
                                 list_type: list_type_from(block),
                                 intro: String::new(),
                                 items: parse_items(block),
                             })),
-                            _ => pending_alineas.push(parse_single_tbl(block)),
+                            _ => result.push(parse_single_tbl(block)),
                         }
                     }
                 } else {
                     if let Some(t) = pending_intro.take() {
-                        pending_alineas.push(Subparagraph::Text(t));
+                        result.push(Subparagraph::Plain(t));
                     }
                     let t = extract_text(elem);
                     if !t.is_empty() {
@@ -180,7 +167,7 @@ fn parse_annex_paragraphs(node: Node) -> Vec<AnnexParagraph> {
             }
             "LIST" => {
                 let intro = pending_intro.take().unwrap_or_default();
-                pending_alineas.push(Subparagraph::List(ListBlock {
+                result.push(Subparagraph::List(ListBlock {
                     list_type: list_type_from(elem),
                     intro,
                     items: parse_items(elem),
@@ -189,19 +176,19 @@ fn parse_annex_paragraphs(node: Node) -> Vec<AnnexParagraph> {
             "TITLE" => {}
             "GR.TBL" => {
                 if let Some(t) = pending_intro.take() {
-                    pending_alineas.push(Subparagraph::Text(t));
+                    result.push(Subparagraph::Plain(t));
                 }
-                pending_alineas.extend(parse_table(elem));
+                result.extend(parse_table(elem));
             }
             "TBL" => {
                 if let Some(t) = pending_intro.take() {
-                    pending_alineas.push(Subparagraph::Text(t));
+                    result.push(Subparagraph::Plain(t));
                 }
-                pending_alineas.push(parse_single_tbl(elem));
+                result.push(parse_single_tbl(elem));
             }
             _ => {
                 if let Some(t) = pending_intro.take() {
-                    pending_alineas.push(Subparagraph::Text(t));
+                    result.push(Subparagraph::Plain(t));
                 }
                 let t = extract_text(elem);
                 if !t.is_empty() {
@@ -211,7 +198,9 @@ fn parse_annex_paragraphs(node: Node) -> Vec<AnnexParagraph> {
         }
     }
 
-    flush_pending(&mut result, &mut pending_alineas, &mut pending_intro);
+    if let Some(t) = pending_intro {
+        result.push(Subparagraph::Plain(t));
+    }
     result
 }
 
@@ -245,7 +234,7 @@ fn np_to_physical_numbered_paragraph(node: Node) -> PhysicalNumberedParagraph {
         if txt.is_empty() {
             vec![]
         } else {
-            vec![Subparagraph::Text(txt)]
+            vec![Subparagraph::Plain(txt)]
         }
     } else {
         let list_type = nested_lists.first().and_then(|n| list_type_from(*n));
@@ -280,7 +269,7 @@ mod tests {
 
     /// Wraps `contents_inner` in a minimal `<ANNEX>` document and returns the
     /// parsed paragraphs, panicking if content is not `AnnexContent::Paragraphs`.
-    fn parse_paragraphs(contents_inner: &str) -> Vec<AnnexParagraph> {
+    fn parse_paragraphs(contents_inner: &str) -> Vec<Subparagraph> {
         let xml = format!(
             r#"<ANNEX><TITLE><TI><P>ANNEX X</P></TI></TITLE><CONTENTS>{}</CONTENTS></ANNEX>"#,
             contents_inner
@@ -397,7 +386,7 @@ mod tests {
         assert_eq!(sections[0].title, "Part A");
         assert_eq!(sections[0].alineas.len(), 1);
         assert!(
-            matches!(&sections[0].alineas[0], Subparagraph::Text(t) if t == "Content paragraph.")
+            matches!(&sections[0].alineas[0], Subparagraph::Plain(t) if t == "Content paragraph.")
         );
         assert_eq!(sections[1].title, "Part B");
     }
@@ -429,14 +418,11 @@ mod tests {
     // ── Paragraphs mode ───────────────────────────────────────────────────────
 
     #[test]
-    /// A bare `<P>` with no surrounding `<NP>` becomes an anonymous paragraph
-    /// (`number: None`) with a single `Text` alinea.
+    /// A bare `<P>` with no surrounding `<NP>` becomes a `Subparagraph::Plain` item.
     fn plain_paragraphs_become_anonymous_paragraph() {
         let paras = parse_paragraphs("<P>Some text.</P>");
         assert_eq!(paras.len(), 1);
-        let AnnexParagraph::Plain(ref pp) = paras[0] else { panic!("expected Plain") };
-        assert_eq!(pp.content.len(), 1);
-        assert!(matches!(&pp.content[0], Subparagraph::Text(t) if t == "Some text."));
+        assert!(matches!(&paras[0], Subparagraph::Plain(t) if t == "Some text."));
     }
 
     #[test]
@@ -447,26 +433,26 @@ mod tests {
     }
 
     #[test]
-    /// A single `<NP>` with `<NO.P>` and `<TXT>` becomes a numbered paragraph with
-    /// one `Text` alinea.
+    /// A single `<NP>` with `<NO.P>` and `<TXT>` becomes a `Subparagraph::Numbered`
+    /// with one `Plain` alinea.
     fn np_becomes_numbered_paragraph() {
         let paras = parse_paragraphs("<NP><NO.P>1.</NO.P><TXT>First item.</TXT></NP>");
         assert_eq!(paras.len(), 1);
-        let AnnexParagraph::Numbered(ref np) = paras[0] else { panic!("expected Numbered") };
+        let Subparagraph::Numbered(ref np) = paras[0] else { panic!("expected Numbered") };
         assert_eq!(np.number, "1.");
         assert_eq!(np.alineas.len(), 1);
-        assert!(matches!(&np.alineas[0], Subparagraph::Text(t) if t == "First item."));
+        assert!(matches!(&np.alineas[0], Subparagraph::Plain(t) if t == "First item."));
     }
 
     #[test]
-    /// Two consecutive `<NP>` elements each become a separate numbered paragraph.
+    /// Two consecutive `<NP>` elements each become a separate `Subparagraph::Numbered`.
     fn multiple_nps_become_separate_paragraphs() {
         let xml = r#"<NP><NO.P>1.</NO.P><TXT>First.</TXT></NP>
                      <NP><NO.P>2.</NO.P><TXT>Second.</TXT></NP>"#;
         let paras = parse_paragraphs(xml);
         assert_eq!(paras.len(), 2);
-        let AnnexParagraph::Numbered(ref np0) = paras[0] else { panic!("expected Numbered") };
-        let AnnexParagraph::Numbered(ref np1) = paras[1] else { panic!("expected Numbered") };
+        let Subparagraph::Numbered(ref np0) = paras[0] else { panic!("expected Numbered") };
+        let Subparagraph::Numbered(ref np1) = paras[1] else { panic!("expected Numbered") };
         assert_eq!(np0.number, "1.");
         assert_eq!(np1.number, "2.");
     }
@@ -485,7 +471,7 @@ mod tests {
         </NP>"#;
         let paras = parse_paragraphs(xml);
         assert_eq!(paras.len(), 1);
-        let AnnexParagraph::Numbered(ref np) = paras[0] else { panic!("expected Numbered") };
+        let Subparagraph::Numbered(ref np) = paras[0] else { panic!("expected Numbered") };
         assert_eq!(np.number, "1.");
         assert_eq!(np.alineas.len(), 1);
         match &np.alineas[0] {
@@ -499,7 +485,7 @@ mod tests {
 
     #[test]
     /// A `<P>` immediately followed by a sibling `<LIST>` has its text promoted to
-    /// the `intro` of the resulting `Subparagraph::List`.
+    /// the `intro` of the resulting `Subparagraph::List`; both collapse into one item.
     fn p_before_list_becomes_intro() {
         let xml = r#"<P>Items:</P>
                      <LIST TYPE="DASH">
@@ -508,8 +494,7 @@ mod tests {
                      </LIST>"#;
         let paras = parse_paragraphs(xml);
         assert_eq!(paras.len(), 1);
-        let AnnexParagraph::Plain(ref pp) = paras[0] else { panic!("expected Plain") };
-        match &pp.content[0] {
+        match &paras[0] {
             Subparagraph::List(lb) => {
                 assert_eq!(lb.intro, "Items:");
                 assert_eq!(lb.items.len(), 2);
@@ -520,7 +505,7 @@ mod tests {
 
     #[test]
     /// A `<P>` that directly wraps a `<LIST>` (no plain text siblings) produces a
-    /// `Subparagraph::List` with an empty intro.
+    /// `Subparagraph::List` directly with an empty intro.
     fn p_wrapping_list_becomes_list_block() {
         let xml = r#"<P><LIST TYPE="ARAB">
             <ITEM><NP><NO.P>1.</NO.P><TXT>First.</TXT></NP></ITEM>
@@ -528,8 +513,7 @@ mod tests {
         </LIST></P>"#;
         let paras = parse_paragraphs(xml);
         assert_eq!(paras.len(), 1);
-        let AnnexParagraph::Plain(ref pp) = paras[0] else { panic!("expected Plain") };
-        match &pp.content[0] {
+        match &paras[0] {
             Subparagraph::List(lb) => {
                 assert_eq!(lb.items.len(), 2);
             }
@@ -538,18 +522,17 @@ mod tests {
     }
 
     #[test]
-    /// A plain `<P>` before the first `<NP>` is flushed as its own anonymous
-    /// paragraph; each subsequent `<NP>` becomes a separate numbered paragraph.
+    /// A plain `<P>` before the first `<NP>` becomes a `Plain` item; each `<NP>`
+    /// becomes a separate `Numbered` item — three flat items in total.
     fn mixed_p_and_np_groups_correctly() {
         let xml = r#"<P>Preamble text.</P>
                      <NP><NO.P>1.</NO.P><TXT>Item one.</TXT></NP>
                      <NP><NO.P>2.</NO.P><TXT>Item two.</TXT></NP>"#;
         let paras = parse_paragraphs(xml);
         assert_eq!(paras.len(), 3);
-        let AnnexParagraph::Plain(ref pp) = paras[0] else { panic!("expected Plain") };
-        assert!(matches!(&pp.content[0], Subparagraph::Text(t) if t == "Preamble text."));
-        let AnnexParagraph::Numbered(ref np1) = paras[1] else { panic!("expected Numbered") };
-        let AnnexParagraph::Numbered(ref np2) = paras[2] else { panic!("expected Numbered") };
+        assert!(matches!(&paras[0], Subparagraph::Plain(t) if t == "Preamble text."));
+        let Subparagraph::Numbered(ref np1) = paras[1] else { panic!("expected Numbered") };
+        let Subparagraph::Numbered(ref np2) = paras[2] else { panic!("expected Numbered") };
         assert_eq!(np1.number, "1.");
         assert_eq!(np2.number, "2.");
     }
