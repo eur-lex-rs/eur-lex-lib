@@ -14,8 +14,8 @@ use std::collections::HashMap;
 
 use crate::error::Error;
 use crate::model::{
-    Act, ArticleContent, ChapterContents, ConsolidatedAct, Item, ItemContent, ListBlock, Metadata,
-    OfficialJournal, RegularAct, Subparagraph,
+    Act, ArticleContent, ChapterContents, ConsolidatedAct, EnactingTermsContent, Item, ItemContent,
+    ListBlock, Metadata, OfficialJournal, RegularAct, Subparagraph,
 };
 use crate::parser::{parse_annex, parse_cons_annex, parse_consolidated_act, parse_regular_act};
 
@@ -74,15 +74,19 @@ pub fn load_act(data_dir: &Path) -> Result<Act, Error> {
 /// "Definitions" and extracts a term → definition-text map from their list items.
 fn extract_definitions(enacting_terms: &crate::model::EnactingTerms) -> HashMap<String, String> {
     let mut map = HashMap::new();
-    let mut articles = enacting_terms
-        .chapters
-        .iter()
-        .flat_map(|ch| match &ch.contents {
-            ChapterContents::Articles(arts) => arts.iter().collect::<Vec<_>>(),
-            ChapterContents::Sections(secs) => {
-                secs.iter().flat_map(|s| s.articles.iter()).collect()
-            }
-        });
+    let all_articles: Box<dyn Iterator<Item = &crate::model::Article>> =
+        match &enacting_terms.content {
+            EnactingTermsContent::Chapters(chapters) => Box::new(
+                chapters.iter().flat_map(|ch| match &ch.contents {
+                    ChapterContents::Articles(arts) => arts.iter().collect::<Vec<_>>(),
+                    ChapterContents::Sections(secs) => {
+                        secs.iter().flat_map(|s| s.articles.iter()).collect()
+                    }
+                }),
+            ),
+            EnactingTermsContent::Articles(arts) => Box::new(arts.iter()),
+        };
+    let mut articles = all_articles;
     if let Some(article) = articles.find(|a| a.title.as_deref() == Some("Definitions")) {
         let block_iter: Box<dyn Iterator<Item = &Subparagraph>> = match &article.content {
             ArticleContent::Paragraphs(paras) => Box::new(
@@ -94,6 +98,7 @@ fn extract_definitions(enacting_terms: &crate::model::EnactingTerms) -> HashMap<
             ArticleContent::Alineas(alineas) => {
                 Box::new(alineas.iter().flat_map(|a| a.content.iter()))
             }
+            ArticleContent::Subdivisions(_) => Box::new(std::iter::empty()),
         };
         for block in block_iter {
             if let Subparagraph::List(lb) = block {

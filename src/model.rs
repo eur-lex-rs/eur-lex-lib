@@ -241,19 +241,28 @@ pub struct Recital {
     pub citations: Vec<Citation>,
 }
 
+/// Discriminates the top-level structure of enacting terms.
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+pub enum EnactingTermsContent {
+    /// The act is divided into chapters (`<DIVISION>` elements inside `<ENACTING.TERMS>`).
+    Chapters(Vec<Chapter>),
+    /// The act has articles directly in `<ENACTING.TERMS>` with no chapter wrapper.
+    Articles(Vec<Article>),
+}
+
 /// The operative body of the act (`<ENACTING.TERMS>`).
 #[derive(Serialize)]
 pub struct EnactingTerms {
-    /// Top-level chapters, mapped from `<DIVISION>` elements directly inside
-    /// `<ENACTING.TERMS>`.
-    pub chapters: Vec<Chapter>,
+    /// Top-level content: either chapters (subdivided acts) or articles directly
+    /// (flat acts with no `<DIVISION>` wrapper).
+    pub content: EnactingTermsContent,
 }
 
 /// A chapter of the act (`<DIVISION>` at the top level of `<ENACTING.TERMS>`).
 ///
 /// Chapters either contain sections (themselves containing articles) or
 /// articles directly — never both.
-#[derive(Serialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct Chapter {
     /// Chapter heading, e.g. `"CHAPTER I"` (from `<TITLE><TI>`).
     pub title: String,
@@ -265,7 +274,7 @@ pub struct Chapter {
 }
 
 /// Discriminates whether a chapter is sub-divided into sections.
-#[derive(Serialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub enum ChapterContents {
     /// The chapter groups its articles under named sections.
     Sections(Vec<Section>),
@@ -274,7 +283,7 @@ pub enum ChapterContents {
 }
 
 /// A section within a chapter (`<DIVISION>` nested inside a top-level `<DIVISION>`).
-#[derive(Serialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct Section {
     /// Section heading, e.g. `"SECTION 1"` (from `<TITLE><TI>`).
     pub title: String,
@@ -291,10 +300,12 @@ pub enum ArticleContent {
     Paragraphs(Vec<LegalParagraph>),
     /// The article contains bare `<ALINEA>` elements with no `<PARAG>` wrapper.
     Alineas(Vec<Alinea>),
+    /// The article contains `<SUBDIV>`-grouped sections.
+    Subdivisions(Vec<Subdivision>),
 }
 
 /// A single article (`<ARTICLE>`).
-#[derive(Serialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct Article {
     /// Article number as printed, e.g. `"Article 6"` (from `<TI.ART>`).
     pub number: String,
@@ -317,6 +328,28 @@ pub struct LegalParagraph {
     /// Structured citations to other EU acts found in this paragraph.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub citations: Vec<Citation>,
+}
+
+/// Discriminates the content of a [`Subdivision`].
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+pub enum SubdivisionContent {
+    /// The subdivision contains `<PARAG>`-wrapped numbered paragraphs.
+    Paragraphs(Vec<LegalParagraph>),
+    /// The subdivision contains bare `<ALINEA>` elements.
+    Alineas(Vec<Alinea>),
+    /// The subdivision contains nested `<SUBDIV>` elements.
+    Subdivisions(Vec<Subdivision>),
+}
+
+/// A titled subdivision within an article (`<SUBDIV>`).
+///
+/// Content is one of: numbered paragraphs, bare alineas, or nested subdivisions.
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+pub struct Subdivision {
+    /// Subdivision title (from `<TITLE>`).
+    pub title: String,
+    /// The content of this subdivision.
+    pub content: SubdivisionContent,
 }
 
 /// An alinea within a [`LegalParagraph`] or a bare alinea within an article (`<ALINEA>`).
@@ -530,7 +563,7 @@ mod tests {
     }
 
     fn empty_enacting_terms() -> EnactingTerms {
-        EnactingTerms { chapters: vec![] }
+        EnactingTerms { content: EnactingTermsContent::Chapters(vec![]) }
     }
 
     fn regular_act(title: &str) -> Act {
@@ -602,13 +635,19 @@ mod tests {
     #[test]
     fn enacting_terms_regular_empty_chapters() {
         let act = regular_act("");
-        assert!(act.enacting_terms().chapters.is_empty());
+        assert!(matches!(
+            &act.enacting_terms().content,
+            EnactingTermsContent::Chapters(ch) if ch.is_empty()
+        ));
     }
 
     #[test]
     fn enacting_terms_consolidated_empty_chapters() {
         let act = consolidated_act("");
-        assert!(act.enacting_terms().chapters.is_empty());
+        assert!(matches!(
+            &act.enacting_terms().content,
+            EnactingTermsContent::Chapters(ch) if ch.is_empty()
+        ));
     }
 
     // ── annexes() ─────────────────────────────────────────────────────────────

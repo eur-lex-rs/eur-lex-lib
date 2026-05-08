@@ -6,8 +6,8 @@ use std::path::Path;
 
 use eur_lex_lib::loader::load_act;
 use eur_lex_lib::model::{
-    Act, AnnexContent, ArticleContent, ChapterContents, Citation, CitedActType, Item, ItemContent,
-    OfficialJournal, OjRef, Subparagraph,
+    Act, AnnexContent, ArticleContent, ChapterContents, Citation, CitedActType, EnactingTermsContent,
+    Item, ItemContent, OfficialJournal, OjRef, Subparagraph,
 };
 
 #[test]
@@ -34,15 +34,12 @@ fn eu_ai_act_structure() {
     );
 
     // Enacting terms: 13 chapters, 113 articles total.
-    assert_eq!(
-        reg.enacting_terms.chapters.len(),
-        13,
-        "unexpected chapter count"
-    );
+    let EnactingTermsContent::Chapters(ref chapters) = reg.enacting_terms.content else {
+        panic!("EU AI Act should have Chapters content");
+    };
+    assert_eq!(chapters.len(), 13, "unexpected chapter count");
 
-    let total_articles: usize = reg
-        .enacting_terms
-        .chapters
+    let total_articles: usize = chapters
         .iter()
         .map(|c| match &c.contents {
             ChapterContents::Articles(arts) => arts.len(),
@@ -52,7 +49,7 @@ fn eu_ai_act_structure() {
     assert_eq!(total_articles, 113, "unexpected total article count");
 
     // Article 3 (definitions): intro + 68 items grouped into a single List block.
-    let ch1_arts = match &reg.enacting_terms.chapters[0].contents {
+    let ch1_arts = match &chapters[0].contents {
         ChapterContents::Articles(arts) => arts,
         _ => panic!("Chapter I should have direct articles"),
     };
@@ -93,7 +90,7 @@ fn eu_ai_act_structure() {
 
     // Article 5, paragraph 1: intro+list grouped into one List block, plus
     // a trailing plain Text. Items (c) and (h) carry nested Lists.
-    let ch2_arts = match &reg.enacting_terms.chapters[1].contents {
+    let ch2_arts = match &chapters[1].contents {
         ChapterContents::Articles(arts) => arts,
         _ => panic!("Chapter II should have direct articles"),
     };

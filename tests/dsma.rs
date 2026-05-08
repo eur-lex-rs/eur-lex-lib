@@ -7,7 +7,8 @@ use std::path::Path;
 
 use eur_lex_lib::loader::load_act;
 use eur_lex_lib::model::{
-    Act, ArticleContent, ChapterContents, Item, ItemContent, OfficialJournal, Subparagraph,
+    Act, ArticleContent, ChapterContents, EnactingTermsContent, Item, ItemContent, OfficialJournal,
+    Subparagraph,
 };
 
 #[test]
@@ -34,15 +35,12 @@ fn dsma_structure() {
     );
 
     // Enacting terms: 5 titles, 32 articles total.
-    assert_eq!(
-        reg.enacting_terms.chapters.len(),
-        5,
-        "unexpected chapter count"
-    );
+    let EnactingTermsContent::Chapters(ref chapters) = reg.enacting_terms.content else {
+        panic!("DSMA should have Chapters content");
+    };
+    assert_eq!(chapters.len(), 5, "unexpected chapter count");
 
-    let total_articles: usize = reg
-        .enacting_terms
-        .chapters
+    let total_articles: usize = chapters
         .iter()
         .map(|c| match &c.contents {
             ChapterContents::Articles(arts) => arts.len(),
@@ -55,7 +53,7 @@ fn dsma_structure() {
     assert_eq!(reg.annexes.len(), 0, "DSMA should have no annexes");
 
     // Title I (idx 0): 2 direct articles.
-    let title1_arts = match &reg.enacting_terms.chapters[0].contents {
+    let title1_arts = match &chapters[0].contents {
         ChapterContents::Articles(arts) => arts,
         _ => panic!("Title I should have direct articles"),
     };
@@ -96,7 +94,7 @@ fn dsma_structure() {
     }
 
     // Title II (idx 1): 5 direct articles.
-    let title2_arts = match &reg.enacting_terms.chapters[1].contents {
+    let title2_arts = match &chapters[1].contents {
         ChapterContents::Articles(arts) => arts,
         _ => panic!("Title II should have direct articles"),
     };
@@ -133,7 +131,7 @@ fn dsma_structure() {
     }
 
     // Title III (idx 2): 4 sections (chapters), 7 articles total.
-    let title3_secs = match &reg.enacting_terms.chapters[2].contents {
+    let title3_secs = match &chapters[2].contents {
         ChapterContents::Sections(secs) => secs,
         _ => panic!("Title III should have sections"),
     };
@@ -147,7 +145,7 @@ fn dsma_structure() {
     );
 
     // Title IV (idx 3): 3 sections (chapters), 9 articles total.
-    let title4_secs = match &reg.enacting_terms.chapters[3].contents {
+    let title4_secs = match &chapters[3].contents {
         ChapterContents::Sections(secs) => secs,
         _ => panic!("Title IV should have sections"),
     };
@@ -161,7 +159,7 @@ fn dsma_structure() {
     );
 
     // Title V (idx 4): 9 direct articles.
-    let title5_arts = match &reg.enacting_terms.chapters[4].contents {
+    let title5_arts = match &chapters[4].contents {
         ChapterContents::Articles(arts) => arts,
         _ => panic!("Title V should have direct articles"),
     };

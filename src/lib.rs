@@ -15,6 +15,7 @@
 //! ```no_run
 //! use std::path::Path;
 //! use eur_lex_lib::{load_act, Act};
+//! use eur_lex_lib::model::EnactingTermsContent;
 //!
 //! let act = load_act(Path::new("/path/to/formex/dir")).unwrap();
 //!
@@ -23,8 +24,8 @@
 //! if let Some(celex) = &act.metadata().celex {
 //!     println!("CELEX: {celex}");
 //! }
-//! for chapter in &act.enacting_terms().chapters {
-//!     println!("{}", chapter.title);
+//! if let EnactingTermsContent::Chapters(chapters) = &act.enacting_terms().content {
+//!     for chapter in chapters { println!("{}", chapter.title); }
 //! }
 //! if let Some(def) = act.definitions().get("AI system") {
 //!     println!("{def}");

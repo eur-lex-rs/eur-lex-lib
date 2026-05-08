@@ -20,6 +20,11 @@ articles, and nested lists), tables, annexes, and a flat definitions map when
 the act contains a Definitions article. Both original and consolidated acts are
 supported.
 
+Article content takes one of three forms depending on the XML structure:
+numbered paragraphs (`<PARAG>`), bare alineas (`<ALINEA>`), or titled
+subdivisions (`<SUBDIV>`) — thematic groupings that each carry their own title
+and contain paragraphs or alineas (and can nest further subdivisions).
+
 ---
 
 ## European legislative acts
@@ -276,8 +281,12 @@ an original or a consolidated version.
     "enacting_formula": "HAVE ADOPTED THIS REGULATION:"
   },
 
+  // enacting_terms.content is one of two variants:
+  // - "Chapters" for acts divided into <DIVISION> chapters (most acts)
+  // - "Articles" for flat acts whose articles sit directly in <ENACTING.TERMS>
   "enacting_terms": {
-    "chapters": [
+    "content": {
+      "Chapters": [
       {
         "title": "CHAPTER I",
         "subtitle": "General provisions",
@@ -287,7 +296,9 @@ an original or a consolidated version.
             {
               "number": "Article 1",
               "title": "Subject matter",
-              "paragraphs": [
+              // Article content is one of three variants:
+              // 1. Paragraphs — numbered <PARAG> wrappers (most common)
+              "content": { "Paragraphs": [
                 {
                   "number": "1.",
                   "alineas": [
@@ -332,13 +343,31 @@ an original or a consolidated version.
                     } }
                   ]
                 }
-              ]
+              ] },
+              // 2. Alineas — bare <ALINEA> children, no <PARAG> wrapper
+              // "content": { "Alineas": [ { "content": [ { "Text": "…" } ] } ] },
+              // 3. Subdivisions — <SUBDIV> thematic groups, each with a title
+              // "content": { "Subdivisions": [
+              //   {
+              //     "title": "NORMAL VALUE",
+              //     "content": { "Paragraphs": [
+              //       { "number": "1.", "alineas": [ { "content": [ { "Text": "…" } ] } ] }
+              //     ] }
+              //   },
+              //   {
+              //     "title": "EXPORT PRICE",
+              //     "content": { "Paragraphs": [ "…" ] }
+              //   }
+              // ] }
             }
           ]
         }
       }
-    ]
+      ]    // end Chapters array
+    }      // end content
   },
+  // For a flat act (no chapters), enacting_terms looks like:
+  // "enacting_terms": { "content": { "Articles": [ { "number": "Article 1", "…": "…" } ] } }
 
   "annexes": [
     {
@@ -409,6 +438,7 @@ full parse of six different EU legislative acts against known structural counts:
 | `tests/dsa.rs` | Digital Services Act (`data/32022R2065`) | Original | 93 | 156 | 27 | — |
 | `tests/dsma.rs` | Copyright in the Digital Single Market (`data/32019L0790`) | Original | 32 | 86 | 6 | — |
 | `tests/trademark_act.rs` | EU Trade Mark Regulation (`data/32017R1001`) | Original | 212 | 48 | — | — |
+| `tests/anti_dumping.rs` | Anti-Dumping Regulation (`data/32016R1036`) | Original | 25 | 32 | — | — |
 | `tests/reach.rs` | REACH Regulation (`data/32006R1907`) | Consolidated | 141 | — | — | ✓ |
 | `tests/consumer_directive.rs` | Consumer Rights Directive (`data/32011L0083`) | Consolidated | 36 | — | — | ✓ |
 

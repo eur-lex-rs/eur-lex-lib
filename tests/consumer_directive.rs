@@ -6,7 +6,7 @@
 use std::path::Path;
 
 use eur_lex_lib::loader::load_act;
-use eur_lex_lib::model::{Act, AnnexContent, ChapterContents, Subparagraph};
+use eur_lex_lib::model::{Act, AnnexContent, ChapterContents, EnactingTermsContent, Subparagraph};
 
 #[test]
 fn consumer_directive_structure() {
@@ -24,12 +24,11 @@ fn consumer_directive_structure() {
     );
 
     // 6 chapters, all with direct articles (no section sub-divisions).
-    assert_eq!(
-        act.enacting_terms.chapters.len(),
-        6,
-        "unexpected chapter count"
-    );
-    for ch in &act.enacting_terms.chapters {
+    let EnactingTermsContent::Chapters(ref chapters) = act.enacting_terms.content else {
+        panic!("Consumer Rights Directive should have Chapters content");
+    };
+    assert_eq!(chapters.len(), 6, "unexpected chapter count");
+    for ch in chapters {
         assert!(
             matches!(&ch.contents, ChapterContents::Articles(_)),
             "chapter '{}' should have direct articles, not sections",
@@ -38,9 +37,7 @@ fn consumer_directive_structure() {
     }
 
     // Total articles: 36.
-    let total_articles: usize = act
-        .enacting_terms
-        .chapters
+    let total_articles: usize = chapters
         .iter()
         .map(|c| match &c.contents {
             ChapterContents::Articles(arts) => arts.len(),

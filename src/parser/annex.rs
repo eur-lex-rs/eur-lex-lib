@@ -20,7 +20,7 @@ use crate::model::*;
 /// If the `<CONTENTS>` element's top-level children include any `<GR.SEQ>`
 /// elements the annex is parsed as [`AnnexContent::Sections`]; otherwise it is
 /// parsed as [`AnnexContent::Paragraphs`], treating each `<NP>` as a
-/// [`Paragraph`] and grouping surrounding `<P>`/`<LIST>` elements into
+/// [`PhysicalNumberedParagraph`] and grouping surrounding `<P>`/`<LIST>` elements into
 /// anonymous paragraphs.
 ///
 /// # Errors

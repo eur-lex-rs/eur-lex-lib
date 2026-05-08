@@ -7,7 +7,7 @@
 use std::path::Path;
 
 use eur_lex_lib::loader::load_act;
-use eur_lex_lib::model::{Act, AnnexContent, ChapterContents, Subparagraph};
+use eur_lex_lib::model::{Act, AnnexContent, ChapterContents, EnactingTermsContent, Subparagraph};
 
 #[test]
 fn reach_regulation_structure() {
@@ -25,16 +25,13 @@ fn reach_regulation_structure() {
     );
 
     // 15 top-level titles.
-    assert_eq!(
-        reg.enacting_terms.chapters.len(),
-        15,
-        "unexpected chapter count"
-    );
+    let EnactingTermsContent::Chapters(ref chapters) = reg.enacting_terms.content else {
+        panic!("REACH regulation should have Chapters content");
+    };
+    assert_eq!(chapters.len(), 15, "unexpected chapter count");
 
     // Total articles: 141.
-    let total_articles: usize = reg
-        .enacting_terms
-        .chapters
+    let total_articles: usize = chapters
         .iter()
         .map(|c| match &c.contents {
             ChapterContents::Articles(arts) => arts.len(),

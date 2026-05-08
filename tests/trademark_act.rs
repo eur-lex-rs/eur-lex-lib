@@ -7,8 +7,8 @@ use std::path::Path;
 
 use eur_lex_lib::loader::load_act;
 use eur_lex_lib::model::{
-    Act, AnnexContent, ArticleContent, ChapterContents, Citation, CitedActType, Item, ItemContent,
-    OfficialJournal, OjRef, Subparagraph,
+    Act, AnnexContent, ArticleContent, ChapterContents, Citation, CitedActType, EnactingTermsContent,
+    Item, ItemContent, OfficialJournal, OjRef, Subparagraph,
 };
 
 #[test]
@@ -35,15 +35,12 @@ fn trademark_act_structure() {
     );
 
     // Enacting terms: 14 chapters, 212 articles total.
-    assert_eq!(
-        reg.enacting_terms.chapters.len(),
-        14,
-        "unexpected chapter count"
-    );
+    let EnactingTermsContent::Chapters(ref chapters) = reg.enacting_terms.content else {
+        panic!("TrademarkAct should have Chapters content");
+    };
+    assert_eq!(chapters.len(), 14, "unexpected chapter count");
 
-    let total_articles: usize = reg
-        .enacting_terms
-        .chapters
+    let total_articles: usize = chapters
         .iter()
         .map(|c| match &c.contents {
             ChapterContents::Articles(arts) => arts.len(),
@@ -71,7 +68,7 @@ fn trademark_act_structure() {
     );
 
     // Chapter I (idx 0): 3 direct articles.
-    let ch1_arts = match &reg.enacting_terms.chapters[0].contents {
+    let ch1_arts = match &chapters[0].contents {
         ChapterContents::Articles(arts) => arts,
         _ => panic!("Chapter I should have direct articles"),
     };
@@ -103,7 +100,7 @@ fn trademark_act_structure() {
     assert!(matches!(&art3_alineas[0].content[0], Subparagraph::Text(_)));
 
     // Chapter II (idx 1): 4 sections.
-    let ch2_secs = match &reg.enacting_terms.chapters[1].contents {
+    let ch2_secs = match &chapters[1].contents {
         ChapterContents::Sections(secs) => secs,
         _ => panic!("Chapter II should have sections"),
     };
@@ -146,14 +143,14 @@ fn trademark_act_structure() {
     }
 
     // Chapter V (idx 4): 5 direct articles.
-    let ch5_arts = match &reg.enacting_terms.chapters[4].contents {
+    let ch5_arts = match &chapters[4].contents {
         ChapterContents::Articles(arts) => arts,
         _ => panic!("Chapter V should have direct articles"),
     };
     assert_eq!(ch5_arts.len(), 5, "Chapter V should have 5 articles");
 
     // Chapter XIV (idx 13): 6 direct articles (final chapter).
-    let ch14_arts = match &reg.enacting_terms.chapters[13].contents {
+    let ch14_arts = match &chapters[13].contents {
         ChapterContents::Articles(arts) => arts,
         _ => panic!("Chapter XIV should have direct articles"),
     };

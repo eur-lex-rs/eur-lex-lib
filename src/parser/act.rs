@@ -160,14 +160,32 @@ fn parse_recital(node: Node) -> Recital {
     }
 }
 
-/// Collects all top-level `<DIVISION>` elements as chapters.
+/// Parses `<ENACTING.TERMS>` into an [`EnactingTerms`].
+///
+/// If `<DIVISION>` children are present they become chapters; otherwise
+/// `<ARTICLE>` children are collected directly (flat acts with no chapter structure).
 fn parse_enacting_terms(node: Node) -> Result<EnactingTerms, Error> {
-    let chapters = node
+    let division_nodes: Vec<_> = node
         .children()
         .filter(|n| n.is_element() && n.tag_name().name() == "DIVISION")
-        .map(parse_chapter)
-        .collect::<Result<Vec<_>, _>>()?;
-    Ok(EnactingTerms { chapters })
+        .collect();
+
+    let content = if !division_nodes.is_empty() {
+        let chapters = division_nodes
+            .into_iter()
+            .map(parse_chapter)
+            .collect::<Result<Vec<_>, _>>()?;
+        EnactingTermsContent::Chapters(chapters)
+    } else {
+        let articles = node
+            .children()
+            .filter(|n| n.is_element() && n.tag_name().name() == "ARTICLE")
+            .map(parse_article)
+            .collect::<Result<Vec<_>, _>>()?;
+        EnactingTermsContent::Articles(articles)
+    };
+
+    Ok(EnactingTerms { content })
 }
 
 /// Parses a top-level `<DIVISION>` as a chapter.
@@ -248,12 +266,23 @@ fn parse_article(node: Node) -> Result<Article, Error> {
         .find(|n| n.is_element() && n.tag_name().name() == "STI.ART")
         .map(extract_text);
 
+    let subdiv_nodes: Vec<_> = node
+        .children()
+        .filter(|n| n.is_element() && n.tag_name().name() == "SUBDIV")
+        .collect();
+
     let parag_nodes: Vec<_> = node
         .children()
         .filter(|n| n.is_element() && n.tag_name().name() == "PARAG")
         .collect();
 
-    let content = if !parag_nodes.is_empty() {
+    let content = if !subdiv_nodes.is_empty() {
+        let subdivisions = subdiv_nodes
+            .into_iter()
+            .map(parse_subdivision)
+            .collect::<Result<Vec<_>, _>>()?;
+        ArticleContent::Subdivisions(subdivisions)
+    } else if !parag_nodes.is_empty() {
         let paragraphs = parag_nodes
             .into_iter()
             .map(parse_legal_paragraph)
@@ -307,6 +336,48 @@ fn parse_alinea(node: Node) -> Alinea {
     }
 }
 
+/// Parses a `<SUBDIV>` element into a [`Subdivision`].
+fn parse_subdivision(node: Node) -> Result<Subdivision, Error> {
+    let title = node
+        .children()
+        .find(|n| n.is_element() && n.tag_name().name() == "TITLE")
+        .map(extract_text)
+        .unwrap_or_default();
+
+    let subdiv_nodes: Vec<_> = node
+        .children()
+        .filter(|n| n.is_element() && n.tag_name().name() == "SUBDIV")
+        .collect();
+
+    let parag_nodes: Vec<_> = node
+        .children()
+        .filter(|n| n.is_element() && n.tag_name().name() == "PARAG")
+        .collect();
+
+    let content = if !subdiv_nodes.is_empty() {
+        let subdivisions = subdiv_nodes
+            .into_iter()
+            .map(parse_subdivision)
+            .collect::<Result<Vec<_>, _>>()?;
+        SubdivisionContent::Subdivisions(subdivisions)
+    } else if !parag_nodes.is_empty() {
+        let paragraphs = parag_nodes
+            .into_iter()
+            .map(parse_legal_paragraph)
+            .collect::<Result<Vec<_>, _>>()?;
+        SubdivisionContent::Paragraphs(paragraphs)
+    } else {
+        let alineas = node
+            .children()
+            .filter(|n| n.is_element() && n.tag_name().name() == "ALINEA")
+            .map(parse_alinea)
+            .collect();
+        SubdivisionContent::Alineas(alineas)
+    };
+
+    Ok(Subdivision { title, content })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -353,7 +424,10 @@ mod tests {
         assert_eq!(title, "Test Consolidated Regulation");
         assert_eq!(preamble.init, "THE COUNCIL,");
         assert_eq!(preamble.enacting_formula, "HAVE ADOPTED:");
-        assert_eq!(enacting_terms.chapters.len(), 1);
+        let EnactingTermsContent::Chapters(ref chapters) = enacting_terms.content else {
+            panic!("expected Chapters content");
+        };
+        assert_eq!(chapters.len(), 1);
     }
 
     #[test]
@@ -383,11 +457,10 @@ mod tests {
             </CONS.DOC>
         </CONS.ACT>"#;
         let (_, _, enacting_terms) = parse_consolidated_act(xml).unwrap();
-        assert_eq!(
-            enacting_terms.chapters.len(),
-            2,
-            "TOC must not be counted as a chapter"
-        );
+        let EnactingTermsContent::Chapters(ref chapters) = enacting_terms.content else {
+            panic!("expected Chapters content");
+        };
+        assert_eq!(chapters.len(), 2, "TOC must not be counted as a chapter");
     }
 
     #[test]
