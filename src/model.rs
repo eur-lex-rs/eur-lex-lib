@@ -284,6 +284,15 @@ pub struct Section {
     pub articles: Vec<Article>,
 }
 
+/// Discriminates the top-level content structure of an article.
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+pub enum ArticleContent {
+    /// The article contains `<PARAG>`-wrapped numbered paragraphs.
+    Paragraphs(Vec<LegalParagraph>),
+    /// The article contains bare `<ALINEA>` elements with no `<PARAG>` wrapper.
+    Alineas(Vec<Alinea>),
+}
+
 /// A single article (`<ARTICLE>`).
 #[derive(Serialize)]
 pub struct Article {
@@ -292,33 +301,54 @@ pub struct Article {
     /// Optional article title, e.g. `"Classification rules for high-risk AI systems"`
     /// (from `<STI.ART>`).
     pub title: Option<String>,
-    /// The paragraphs of the article. Single-paragraph articles still use
-    /// this vec (length 1, `number: None`).
-    pub paragraphs: Vec<Paragraph>,
+    /// The content of the article: either numbered paragraphs or bare alineas.
+    pub content: ArticleContent,
 }
 
-/// A numbered paragraph within an article (`<PARAG>`).
+/// A numbered legal paragraph within an article (`<PARAG>`).
+///
+/// Always has a number (from `<NO.PARAG>`) and contains one or more alineas.
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+pub struct LegalParagraph {
+    /// Paragraph number, e.g. `"1."` (from `<NO.PARAG>`).
+    pub number: String,
+    /// The alineas of this paragraph (each maps to one `<ALINEA>` element).
+    pub alineas: Vec<Alinea>,
+    /// Structured citations to other EU acts found in this paragraph.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub citations: Vec<Citation>,
+}
+
+/// An alinea within a [`LegalParagraph`] or a bare alinea within an article (`<ALINEA>`).
+///
+/// An alinea is the lowest-level numbered structure of a legal article. It has no
+/// number of its own; its content is one or more block elements.
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+pub struct Alinea {
+    /// Block content of this alinea (text, list, or table elements).
+    pub content: Vec<Subparagraph>,
+    /// Structured citations to other EU acts found in this alinea.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub citations: Vec<Citation>,
+}
+
+/// A numbered paragraph in an annex (`<NP>`).
 ///
 /// Each paragraph consists of an optional number label followed by one or
-/// more alineas (text blocks). When an article has no `<PARAG>` wrappers its
-/// `<ALINEA>` children are grouped into a single paragraph with `number: None`.
+/// more content blocks.
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct Paragraph {
-    /// Paragraph number, e.g. `"1."` (from `<NO.PARAG>`). `None` for articles
-    /// that use bare `<ALINEA>` elements without a `<PARAG>` wrapper.
+    /// Paragraph number, e.g. `"1."` (from `<NO.P>`). `None` for anonymous
+    /// content blocks between `<NP>` elements.
     pub number: Option<String>,
-    /// Content blocks of this paragraph. A plain alinea becomes a
-    /// [`Subparagraph::Text`]; an alinea that contains a `<LIST>` (with its
-    /// optional intro `<P>`) becomes a [`Subparagraph::List`] whose items are
-    /// [`Item`] values with 1-based positions; a `<GR.TBL>` or bare `<TBL>`
-    /// element becomes a [`Subparagraph::Table`].
+    /// Content blocks of this paragraph.
     pub alineas: Vec<Subparagraph>,
     /// Structured citations to other EU acts found in this paragraph.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub citations: Vec<Citation>,
 }
 
-/// A content element within a [`Paragraph`] or [`AnnexSection`].
+/// A content element within an [`Alinea`], [`Paragraph`], or [`AnnexSection`].
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub enum Subparagraph {
     /// Plain text block (a bare `<P>` or `<ALINEA>`).
@@ -591,7 +621,10 @@ mod tests {
         }
         assert_eq!(act.annexes().len(), 1);
         assert_eq!(act.annexes()[0].number, "ANNEX II");
-        assert_eq!(act.annexes()[0].subtitle.as_deref(), Some("Technical requirements"));
+        assert_eq!(
+            act.annexes()[0].subtitle.as_deref(),
+            Some("Technical requirements")
+        );
     }
 
     // ── definitions() ─────────────────────────────────────────────────────────
@@ -612,17 +645,25 @@ mod tests {
     fn definitions_regular_populated() {
         let mut act = regular_act("");
         if let Act::Regular(ref mut r) = act {
-            r.definitions.insert("AI system".into(), "a machine-based system…".into());
+            r.definitions
+                .insert("AI system".into(), "a machine-based system…".into());
         }
-        assert_eq!(act.definitions().get("AI system").map(String::as_str), Some("a machine-based system…"));
+        assert_eq!(
+            act.definitions().get("AI system").map(String::as_str),
+            Some("a machine-based system…")
+        );
     }
 
     #[test]
     fn definitions_consolidated_populated() {
         let mut act = consolidated_act("");
         if let Act::Consolidated(ref mut c) = act {
-            c.definitions.insert("trade mark".into(), "a sign capable of…".into());
+            c.definitions
+                .insert("trade mark".into(), "a sign capable of…".into());
         }
-        assert_eq!(act.definitions().get("trade mark").map(String::as_str), Some("a sign capable of…"));
+        assert_eq!(
+            act.definitions().get("trade mark").map(String::as_str),
+            Some("a sign capable of…")
+        );
     }
 }

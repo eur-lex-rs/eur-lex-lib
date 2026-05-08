@@ -10,8 +10,8 @@ use eur_lex_lib::model::{Act, AnnexContent, ChapterContents, Subparagraph};
 
 #[test]
 fn consumer_directive_structure() {
-    let loaded = load_act(Path::new("data/32011L0083"))
-        .expect("failed to load Consumer Rights Directive");
+    let loaded =
+        load_act(Path::new("data/32011L0083")).expect("failed to load Consumer Rights Directive");
     let Act::Consolidated(act) = loaded else {
         panic!("Consumer Rights Directive should be a Consolidated act")
     };
@@ -24,7 +24,11 @@ fn consumer_directive_structure() {
     );
 
     // 6 chapters, all with direct articles (no section sub-divisions).
-    assert_eq!(act.enacting_terms.chapters.len(), 6, "unexpected chapter count");
+    assert_eq!(
+        act.enacting_terms.chapters.len(),
+        6,
+        "unexpected chapter count"
+    );
     for ch in &act.enacting_terms.chapters {
         assert!(
             matches!(&ch.contents, ChapterContents::Articles(_)),
@@ -34,18 +38,29 @@ fn consumer_directive_structure() {
     }
 
     // Total articles: 36.
-    let total_articles: usize = act.enacting_terms.chapters.iter().map(|c| match &c.contents {
-        ChapterContents::Articles(arts) => arts.len(),
-        ChapterContents::Sections(secs) => secs.iter().map(|s| s.articles.len()).sum(),
-    }).sum();
+    let total_articles: usize = act
+        .enacting_terms
+        .chapters
+        .iter()
+        .map(|c| match &c.contents {
+            ChapterContents::Articles(arts) => arts.len(),
+            ChapterContents::Sections(secs) => secs.iter().map(|s| s.articles.len()).sum(),
+        })
+        .sum();
     assert_eq!(total_articles, 36, "unexpected total article count");
 
     // 2 inline annexes.
     assert_eq!(act.annexes.len(), 2, "unexpected annex count");
-    assert!(act.annexes[0].number.contains("ANNEX I"),
-        "expected ANNEX I at index 0, got: {}", act.annexes[0].number);
-    assert!(act.annexes[1].number.contains("ANNEX II"),
-        "expected ANNEX II at index 1, got: {}", act.annexes[1].number);
+    assert!(
+        act.annexes[0].number.contains("ANNEX I"),
+        "expected ANNEX I at index 0, got: {}",
+        act.annexes[0].number
+    );
+    assert!(
+        act.annexes[1].number.contains("ANNEX II"),
+        "expected ANNEX II at index 1, got: {}",
+        act.annexes[1].number
+    );
 
     // Annex I has GR.SEQ sub-divisions → Sections.
     assert!(
@@ -60,9 +75,14 @@ fn consumer_directive_structure() {
 
     // Annex II contains the GR.TBL correlation table → at least one Table subparagraph.
     if let AnnexContent::Paragraphs(paras) = &act.annexes[1].content {
-        let has_table = paras
-            .iter()
-            .any(|p| p.alineas.iter().any(|a| matches!(a, Subparagraph::Table(_))));
-        assert!(has_table, "ANNEX II should contain at least one Table subparagraph");
+        let has_table = paras.iter().any(|p| {
+            p.alineas
+                .iter()
+                .any(|a| matches!(a, Subparagraph::Table(_)))
+        });
+        assert!(
+            has_table,
+            "ANNEX II should contain at least one Table subparagraph"
+        );
     }
 }

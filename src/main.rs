@@ -45,9 +45,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     .expect("serialization failed");
 
     match cli.output {
-        Some(ref path) => std::fs::write(path, &json).map_err(|e| {
-            eur_lex_lib::error::Error::Io { path: path.display().to_string(), source: e }
-        })?,
+        Some(ref path) => {
+            std::fs::write(path, &json).map_err(|e| eur_lex_lib::error::Error::Io {
+                path: path.display().to_string(),
+                source: e,
+            })?
+        }
         None => println!("{json}"),
     }
 

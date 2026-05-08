@@ -13,8 +13,11 @@ use roxmltree::Document;
 use std::collections::HashMap;
 
 use crate::error::Error;
-use crate::model::{Act, ConsolidatedAct, Item, ItemContent, Metadata, OfficialJournal, RegularAct, ChapterContents, ListBlock, Subparagraph};
-use crate::parser::{parse_regular_act, parse_consolidated_act, parse_annex, parse_cons_annex};
+use crate::model::{
+    Act, ArticleContent, ChapterContents, ConsolidatedAct, Item, ItemContent, ListBlock, Metadata,
+    OfficialJournal, RegularAct, Subparagraph,
+};
+use crate::parser::{parse_annex, parse_cons_annex, parse_consolidated_act, parse_regular_act};
 
 /// Loads a complete act from a directory of Formex `.fmx.xml` files.
 ///
@@ -38,7 +41,14 @@ pub fn load_act(data_dir: &Path) -> Result<Act, Error> {
         let (title, preamble, enacting_terms) = parse_consolidated_act(&main_xml)?;
         let annexes = parse_cons_annex(&main_xml)?;
         let definitions = extract_definitions(&enacting_terms);
-        Ok(Act::Consolidated(ConsolidatedAct { metadata, title, preamble, enacting_terms, annexes, definitions }))
+        Ok(Act::Consolidated(ConsolidatedAct {
+            metadata,
+            title,
+            preamble,
+            enacting_terms,
+            annexes,
+            definitions,
+        }))
     } else {
         let (title, preamble, enacting_terms) = parse_regular_act(&main_xml)?;
         let annexes = annex_files
@@ -49,7 +59,14 @@ pub fn load_act(data_dir: &Path) -> Result<Act, Error> {
             })
             .collect::<Result<Vec<_>, _>>()?;
         let definitions = extract_definitions(&enacting_terms);
-        Ok(Act::Regular(RegularAct { metadata, title, preamble, enacting_terms, annexes, definitions }))
+        Ok(Act::Regular(RegularAct {
+            metadata,
+            title,
+            preamble,
+            enacting_terms,
+            annexes,
+            definitions,
+        }))
     }
 }
 
@@ -57,19 +74,31 @@ pub fn load_act(data_dir: &Path) -> Result<Act, Error> {
 /// "Definitions" and extracts a term → definition-text map from their list items.
 fn extract_definitions(enacting_terms: &crate::model::EnactingTerms) -> HashMap<String, String> {
     let mut map = HashMap::new();
-    let mut articles = enacting_terms.chapters.iter().flat_map(|ch| match &ch.contents {
-        ChapterContents::Articles(arts) => arts.iter().collect::<Vec<_>>(),
-        ChapterContents::Sections(secs) => {
-            secs.iter().flat_map(|s| s.articles.iter()).collect()
-        }
-    });
+    let mut articles = enacting_terms
+        .chapters
+        .iter()
+        .flat_map(|ch| match &ch.contents {
+            ChapterContents::Articles(arts) => arts.iter().collect::<Vec<_>>(),
+            ChapterContents::Sections(secs) => {
+                secs.iter().flat_map(|s| s.articles.iter()).collect()
+            }
+        });
     if let Some(article) = articles.find(|a| a.title.as_deref() == Some("Definitions")) {
-        for para in &article.paragraphs {
-            for alinea in &para.alineas {
-                if let Subparagraph::List(lb) = alinea {
-                    for item in &lb.items {
-                        collect_definition_items(item, &mut map);
-                    }
+        let block_iter: Box<dyn Iterator<Item = &Subparagraph>> = match &article.content {
+            ArticleContent::Paragraphs(paras) => Box::new(
+                paras
+                    .iter()
+                    .flat_map(|p| p.alineas.iter())
+                    .flat_map(|a| a.content.iter()),
+            ),
+            ArticleContent::Alineas(alineas) => {
+                Box::new(alineas.iter().flat_map(|a| a.content.iter()))
+            }
+        };
+        for block in block_iter {
+            if let Subparagraph::List(lb) = block {
+                for item in &lb.items {
+                    collect_definition_items(item, &mut map);
                 }
             }
         }
@@ -172,14 +201,19 @@ fn parse_doc_file(doc_file: &Path) -> Result<(Metadata, String, Vec<String>), Er
     let mut authors: Vec<String> = Vec::new();
     let mut eea_relevant = false;
 
-    if let Some(bib) = root.children().find(|n| n.is_element() && n.tag_name().name() == "BIB.DOC") {
+    if let Some(bib) = root
+        .children()
+        .find(|n| n.is_element() && n.tag_name().name() == "BIB.DOC")
+    {
         for child in bib.children().filter(|n| n.is_element()) {
             match child.tag_name().name() {
                 "PROD.ID" => prod_id = Some(child.text().unwrap_or_default().to_string()),
-                "FIN.ID"  => fin_id  = Some(child.text().unwrap_or_default().to_string()),
-                "AUTHOR"  => { authors.push(child.text().unwrap_or_default().to_string()); }
-                "EEA"     => eea_relevant = true,
-                _         => {}
+                "FIN.ID" => fin_id = Some(child.text().unwrap_or_default().to_string()),
+                "AUTHOR" => {
+                    authors.push(child.text().unwrap_or_default().to_string());
+                }
+                "EEA" => eea_relevant = true,
+                _ => {}
             }
         }
     }
@@ -195,14 +229,19 @@ fn parse_doc_file(doc_file: &Path) -> Result<(Metadata, String, Vec<String>), Er
             let mut language = String::new();
             for child in pub_ref.children().filter(|n| n.is_element()) {
                 match child.tag_name().name() {
-                    "COLL"  => collection = child.text().unwrap_or_default().to_string(),
-                    "NO.OJ" => number     = child.text().unwrap_or_default().to_string(),
-                    "DATE"  => date       = child.attribute("ISO").unwrap_or_default().to_string(),
-                    "LG.OJ" => language   = child.text().unwrap_or_default().to_string(),
+                    "COLL" => collection = child.text().unwrap_or_default().to_string(),
+                    "NO.OJ" => number = child.text().unwrap_or_default().to_string(),
+                    "DATE" => date = child.attribute("ISO").unwrap_or_default().to_string(),
+                    "LG.OJ" => language = child.text().unwrap_or_default().to_string(),
                     _ => {}
                 }
             }
-            OfficialJournal { collection, number, date, language }
+            OfficialJournal {
+                collection,
+                number,
+                date,
+                language,
+            }
         });
 
     // ── DOC.MAIN.PUB metadata ─────────────────────────────────────────────────
@@ -216,13 +255,13 @@ fn parse_doc_file(doc_file: &Path) -> Result<(Metadata, String, Vec<String>), Er
 
     for child in doc_main.children().filter(|n| n.is_element()) {
         match child.tag_name().name() {
-            "NO.CELEX"    => celex        = Some(child.text().unwrap_or_default().to_string()),
-            "DATE"        => document_date = Some(child.attribute("ISO").unwrap_or_default().to_string()),
-            "LEGAL.VALUE" => legal_value  = Some(child.text().unwrap_or_default().to_string()),
-            "LG.DOC"      => language     = Some(child.text().unwrap_or_default().to_string()),
-            "PAGE.FIRST"  => page_first   = child.text().and_then(|t| t.parse().ok()),
-            "PAGE.LAST"   => page_last    = child.text().and_then(|t| t.parse().ok()),
-            "PAGE.TOTAL"  => page_total   = child.text().and_then(|t| t.parse().ok()),
+            "NO.CELEX" => celex = Some(child.text().unwrap_or_default().to_string()),
+            "DATE" => document_date = Some(child.attribute("ISO").unwrap_or_default().to_string()),
+            "LEGAL.VALUE" => legal_value = Some(child.text().unwrap_or_default().to_string()),
+            "LG.DOC" => language = Some(child.text().unwrap_or_default().to_string()),
+            "PAGE.FIRST" => page_first = child.text().and_then(|t| t.parse().ok()),
+            "PAGE.LAST" => page_last = child.text().and_then(|t| t.parse().ok()),
+            "PAGE.TOTAL" => page_total = child.text().and_then(|t| t.parse().ok()),
             _ => {}
         }
     }

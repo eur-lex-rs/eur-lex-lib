@@ -5,12 +5,17 @@
 use std::path::Path;
 
 use eur_lex_lib::loader::load_act;
-use eur_lex_lib::model::{Act, ChapterContents, Item, ItemContent, OfficialJournal, Subparagraph};
+use eur_lex_lib::model::{
+    Act, ArticleContent, ChapterContents, Item, ItemContent, OfficialJournal, Subparagraph,
+};
 
 #[test]
 fn dsa_structure() {
-    let act = load_act(Path::new("data/32022R2065")).expect("failed to load DSA from data/32022R2065");
-    let Act::Regular(reg) = act else { panic!("DSA should be a Regular act") };
+    let act =
+        load_act(Path::new("data/32022R2065")).expect("failed to load DSA from data/32022R2065");
+    let Act::Regular(reg) = act else {
+        panic!("DSA should be a Regular act")
+    };
 
     // Title must identify the act number.
     assert!(
@@ -62,65 +67,77 @@ fn dsa_structure() {
         "unexpected article at index 0 of Chapter I"
     );
     assert_eq!(art1.title.as_deref(), Some("Subject matter"));
-    assert_eq!(
-        art1.paragraphs.len(),
-        2,
-        "Article 1 should have 2 paragraphs"
-    );
+    let ArticleContent::Paragraphs(ref art1_paras) = art1.content else {
+        panic!("Article 1 should have Paragraphs content");
+    };
+    assert_eq!(art1_paras.len(), 2, "Article 1 should have 2 paragraphs");
 
-    // Para 1 (number "1."): 1 block — plain Paragraph.
-    let p1 = &art1.paragraphs[0];
-    assert_eq!(p1.number.as_deref(), Some("1."));
-    assert_eq!(
-        p1.alineas.len(),
-        1,
-        "Article 1 para 1 should have 1 alinea block"
-    );
+    // Para 1 (number "1."): 1 alinea with plain text.
+    let p1 = &art1_paras[0];
+    assert_eq!(p1.number, "1.");
+    assert_eq!(p1.alineas.len(), 1, "Article 1 para 1 should have 1 alinea");
     assert!(
-        matches!(&p1.alineas[0], Subparagraph::Text(_)),
-        "Article 1 para 1 alineas[0] should be a plain Text"
+        matches!(&p1.alineas[0].content[0], Subparagraph::Text(_)),
+        "Article 1 para 1 alineas[0].content[0] should be a plain Text"
     );
 
     // Para 2 (number "2."): intro + 3 list items (a)(b)(c) grouped into one List.
-    let p2 = &art1.paragraphs[1];
-    assert_eq!(p2.number.as_deref(), Some("2."));
-    assert_eq!(
-        p2.alineas.len(),
-        1,
-        "Article 1 para 2 should be a single List block"
-    );
-    match &p2.alineas[0] {
+    let p2 = &art1_paras[1];
+    assert_eq!(p2.number, "2.");
+    assert_eq!(p2.alineas.len(), 1, "Article 1 para 2 should have 1 alinea");
+    match &p2.alineas[0].content[0] {
         Subparagraph::List(lb) => {
             assert_eq!(lb.items.len(), 3, "para 2 list should have 3 items");
-            assert!(matches!(&lb.items[0], Item { number: 1, content: ItemContent::Text(_) }));
-            assert!(matches!(&lb.items[1], Item { number: 2, content: ItemContent::Text(_) }));
-            assert!(matches!(&lb.items[2], Item { number: 3, content: ItemContent::Text(_) }));
+            assert!(matches!(
+                &lb.items[0],
+                Item {
+                    number: 1,
+                    content: ItemContent::Text(_)
+                }
+            ));
+            assert!(matches!(
+                &lb.items[1],
+                Item {
+                    number: 2,
+                    content: ItemContent::Text(_)
+                }
+            ));
+            assert!(matches!(
+                &lb.items[2],
+                Item {
+                    number: 3,
+                    content: ItemContent::Text(_)
+                }
+            ));
         }
-        _ => panic!("Article 1 para 2 alineas[0] should be a List"),
+        _ => panic!("Article 1 para 2 alineas[0].content[0] should be a List"),
     }
 
     // Article 3 ("Definitions", idx 2): bare <ALINEA> (no <PARAG> wrapper)
-    // containing <P> + <LIST> with 24 items → 1 unnamed paragraph, 25 alinea blocks.
+    // containing <P> + <LIST> with 24 items → 1 Alinea with a single List block.
     let art3 = &ch1_arts[2];
     assert_eq!(
         art3.number, "Article 3",
         "unexpected article at index 2 of Chapter I"
     );
-    assert_eq!(art3.paragraphs.len(), 1);
-    assert!(
-        art3.paragraphs[0].number.is_none(),
-        "Article 3 bare-alinea paragraph should have no number"
-    );
+    let ArticleContent::Alineas(ref art3_alineas) = art3.content else {
+        panic!("Article 3 should have Alineas content");
+    };
+    assert_eq!(art3_alineas.len(), 1, "Article 3 should have 1 bare alinea");
     assert_eq!(
-        art3.paragraphs[0].alineas.len(),
+        art3_alineas[0].content.len(),
         1,
-        "Article 3 should be a single List block (intro + 24 items)"
+        "Article 3 alinea should have a single List block"
     );
-    match &art3.paragraphs[0].alineas[0] {
+    match &art3_alineas[0].content[0] {
         Subparagraph::List(lb) => {
-            assert_eq!(lb.items.len(), 24, "Article 3 list should have 24 definition items");
+            assert_eq!(
+                lb.items.len(),
+                24,
+                "Article 3 list should have 24 definition items"
+            );
         }
-        _ => panic!("Article 3 alineas[0] should be a List"),
+        _ => panic!("Article 3 alineas[0].content[0] should be a List"),
     }
 
     // Chapter II (idx 1): 7 direct articles.
@@ -180,8 +197,11 @@ fn dsa_structure() {
 
 #[test]
 fn dsa_metadata() {
-    let act = load_act(Path::new("data/32022R2065")).expect("failed to load DSA from data/32022R2065");
-    let Act::Regular(reg) = act else { panic!("DSA should be a Regular act") };
+    let act =
+        load_act(Path::new("data/32022R2065")).expect("failed to load DSA from data/32022R2065");
+    let Act::Regular(reg) = act else {
+        panic!("DSA should be a Regular act")
+    };
     let md = &reg.metadata;
 
     assert_eq!(md.prod_id.as_deref(), Some("20221017018"));
@@ -189,11 +209,17 @@ fn dsa_metadata() {
     assert_eq!(md.authors, vec!["CONSIL"]);
     assert!(!md.eea_relevant, "DSA BIB.DOC has no EEA element");
 
-    let oj = md.official_journal.as_ref().expect("official_journal should be present");
-    assert_eq!(*oj, OfficialJournal {
-        collection: "L".to_string(),
-        number: "277".to_string(),
-        date: "20221027".to_string(),
-        language: "EN".to_string(),
-    });
+    let oj = md
+        .official_journal
+        .as_ref()
+        .expect("official_journal should be present");
+    assert_eq!(
+        *oj,
+        OfficialJournal {
+            collection: "L".to_string(),
+            number: "277".to_string(),
+            date: "20221027".to_string(),
+            language: "EN".to_string(),
+        }
+    );
 }

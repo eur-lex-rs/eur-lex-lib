@@ -6,13 +6,17 @@
 use std::path::Path;
 
 use eur_lex_lib::loader::load_act;
-use eur_lex_lib::model::{Act, ChapterContents, Item, ItemContent, OfficialJournal, Subparagraph};
+use eur_lex_lib::model::{
+    Act, ArticleContent, ChapterContents, Item, ItemContent, OfficialJournal, Subparagraph,
+};
 
 #[test]
 fn dsma_structure() {
-    let act = load_act(Path::new("data/32019L0790"))
-        .expect("failed to load DSMA from data/32019L0790");
-    let Act::Regular(reg) = act else { panic!("DSMA should be a Regular act") };
+    let act =
+        load_act(Path::new("data/32019L0790")).expect("failed to load DSMA from data/32019L0790");
+    let Act::Regular(reg) = act else {
+        panic!("DSMA should be a Regular act")
+    };
 
     // Title must identify the directive number.
     assert!(
@@ -30,12 +34,21 @@ fn dsma_structure() {
     );
 
     // Enacting terms: 5 titles, 32 articles total.
-    assert_eq!(reg.enacting_terms.chapters.len(), 5, "unexpected chapter count");
+    assert_eq!(
+        reg.enacting_terms.chapters.len(),
+        5,
+        "unexpected chapter count"
+    );
 
-    let total_articles: usize = reg.enacting_terms.chapters.iter().map(|c| match &c.contents {
-        ChapterContents::Articles(arts) => arts.len(),
-        ChapterContents::Sections(secs) => secs.iter().map(|s| s.articles.len()).sum(),
-    }).sum();
+    let total_articles: usize = reg
+        .enacting_terms
+        .chapters
+        .iter()
+        .map(|c| match &c.contents {
+            ChapterContents::Articles(arts) => arts.len(),
+            ChapterContents::Sections(secs) => secs.iter().map(|s| s.articles.len()).sum(),
+        })
+        .sum();
     assert_eq!(total_articles, 32, "unexpected total article count");
 
     // No annexes in the DSMA.
@@ -52,26 +65,34 @@ fn dsma_structure() {
     let art1 = &title1_arts[0];
     assert_eq!(art1.number, "Article 1");
     assert_eq!(art1.title.as_deref(), Some("Subject matter and scope"));
-    assert_eq!(art1.paragraphs.len(), 2);
-    assert_eq!(art1.paragraphs[0].number.as_deref(), Some("1."));
-    assert_eq!(art1.paragraphs[0].alineas.len(), 1);
-    assert!(matches!(&art1.paragraphs[0].alineas[0], Subparagraph::Text(_)));
+    let ArticleContent::Paragraphs(ref art1_paras) = art1.content else {
+        panic!("Article 1 should have Paragraphs content");
+    };
+    assert_eq!(art1_paras.len(), 2);
+    assert_eq!(art1_paras[0].number, "1.");
+    assert_eq!(art1_paras[0].alineas.len(), 1);
+    assert!(matches!(
+        &art1_paras[0].alineas[0].content[0],
+        Subparagraph::Text(_)
+    ));
 
     // Article 2 ("Definitions"): bare <ALINEA> with <P> intro + <LIST> (6 items)
-    // → 1 unnamed paragraph with a single List block.
+    // → 1 Alinea with a single List block.
     let art2 = &title1_arts[1];
     assert_eq!(art2.number, "Article 2");
     assert_eq!(art2.title.as_deref(), Some("Definitions"));
-    assert_eq!(art2.paragraphs.len(), 1);
-    assert!(art2.paragraphs[0].number.is_none(),
-        "Article 2 bare-alinea paragraph should have no number");
+    let ArticleContent::Alineas(ref art2_alineas) = art2.content else {
+        panic!("Article 2 should have Alineas content");
+    };
+    assert_eq!(art2_alineas.len(), 1, "Article 2 should have 1 bare alinea");
     assert_eq!(
-        art2.paragraphs[0].alineas.len(), 1,
-        "Article 2 should be a single List block"
+        art2_alineas[0].content.len(),
+        1,
+        "Article 2 alinea should have a single List block"
     );
-    match &art2.paragraphs[0].alineas[0] {
+    match &art2_alineas[0].content[0] {
         Subparagraph::List(lb) => assert_eq!(lb.items.len(), 6),
-        _ => panic!("Article 2 alineas[0] should be a List"),
+        _ => panic!("Article 2 alineas[0].content[0] should be a List"),
     }
 
     // Title II (idx 1): 5 direct articles.
@@ -84,16 +105,31 @@ fn dsma_structure() {
     // Article 5 (Title II idx 2): para 1 has <P> intro + 2 list items (a)(b).
     let art5 = &title2_arts[2];
     assert_eq!(art5.number, "Article 5");
-    let p1 = &art5.paragraphs[0];
-    assert_eq!(p1.number.as_deref(), Some("1."));
-    assert_eq!(p1.alineas.len(), 1, "Article 5 para 1 should be a single List block");
-    match &p1.alineas[0] {
+    let ArticleContent::Paragraphs(ref art5_paras) = art5.content else {
+        panic!("Article 5 should have Paragraphs content");
+    };
+    let p1 = &art5_paras[0];
+    assert_eq!(p1.number, "1.");
+    assert_eq!(p1.alineas.len(), 1, "Article 5 para 1 should have 1 alinea");
+    match &p1.alineas[0].content[0] {
         Subparagraph::List(lb) => {
             assert_eq!(lb.items.len(), 2);
-            assert!(matches!(&lb.items[0], Item { number: 1, content: ItemContent::Text(_) }));
-            assert!(matches!(&lb.items[1], Item { number: 2, content: ItemContent::Text(_) }));
+            assert!(matches!(
+                &lb.items[0],
+                Item {
+                    number: 1,
+                    content: ItemContent::Text(_)
+                }
+            ));
+            assert!(matches!(
+                &lb.items[1],
+                Item {
+                    number: 2,
+                    content: ItemContent::Text(_)
+                }
+            ));
         }
-        _ => panic!("Article 5 para 1 alineas[0] should be a List"),
+        _ => panic!("Article 5 para 1 alineas[0].content[0] should be a List"),
     }
 
     // Title III (idx 2): 4 sections (chapters), 7 articles total.
@@ -104,7 +140,11 @@ fn dsma_structure() {
     assert_eq!(title3_secs.len(), 4, "Title III should have 4 chapters");
     let title3_total: usize = title3_secs.iter().map(|s| s.articles.len()).sum();
     assert_eq!(title3_total, 7, "Title III should have 7 total articles");
-    assert_eq!(title3_secs[0].articles.len(), 4, "Title III chapter 1 should have 4 articles");
+    assert_eq!(
+        title3_secs[0].articles.len(),
+        4,
+        "Title III chapter 1 should have 4 articles"
+    );
 
     // Title IV (idx 3): 3 sections (chapters), 9 articles total.
     let title4_secs = match &reg.enacting_terms.chapters[3].contents {
@@ -114,7 +154,11 @@ fn dsma_structure() {
     assert_eq!(title4_secs.len(), 3, "Title IV should have 3 chapters");
     let title4_total: usize = title4_secs.iter().map(|s| s.articles.len()).sum();
     assert_eq!(title4_total, 9, "Title IV should have 9 total articles");
-    assert_eq!(title4_secs[2].articles.len(), 6, "Title IV chapter 3 should have 6 articles");
+    assert_eq!(
+        title4_secs[2].articles.len(),
+        6,
+        "Title IV chapter 3 should have 6 articles"
+    );
 
     // Title V (idx 4): 9 direct articles.
     let title5_arts = match &reg.enacting_terms.chapters[4].contents {
@@ -133,9 +177,11 @@ fn dsma_structure() {
 
 #[test]
 fn dsma_metadata() {
-    let act = load_act(Path::new("data/32019L0790"))
-        .expect("failed to load DSMA from data/32019L0790");
-    let Act::Regular(reg) = act else { panic!("DSMA should be a Regular act") };
+    let act =
+        load_act(Path::new("data/32019L0790")).expect("failed to load DSMA from data/32019L0790");
+    let Act::Regular(reg) = act else {
+        panic!("DSMA should be a Regular act")
+    };
     let md = &reg.metadata;
 
     assert_eq!(md.prod_id.as_deref(), Some("20190416015"));
@@ -143,11 +189,17 @@ fn dsma_metadata() {
     assert_eq!(md.authors, vec!["PE", "CS"]);
     assert!(md.eea_relevant, "DSMA should be EEA relevant");
 
-    let oj = md.official_journal.as_ref().expect("official_journal should be present");
-    assert_eq!(*oj, OfficialJournal {
-        collection: "L".to_string(),
-        number: "130".to_string(),
-        date: "20190517".to_string(),
-        language: "EN".to_string(),
-    });
+    let oj = md
+        .official_journal
+        .as_ref()
+        .expect("official_journal should be present");
+    assert_eq!(
+        *oj,
+        OfficialJournal {
+            collection: "L".to_string(),
+            number: "130".to_string(),
+            date: "20190517".to_string(),
+            language: "EN".to_string(),
+        }
+    );
 }

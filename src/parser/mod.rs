@@ -22,7 +22,7 @@ pub(crate) mod citation;
 /// Plain-text extraction from Formex mixed-content XML nodes.
 mod text;
 
-pub use act::{parse_regular_act, parse_consolidated_act};
+pub use act::{parse_consolidated_act, parse_regular_act};
 pub use annex::{parse_annex, parse_cons_annex};
 pub(crate) use citation::extract_citations;
 
@@ -48,9 +48,9 @@ pub(crate) fn list_type_from(node: Node) -> Option<ListType> {
     match node.attribute("TYPE")? {
         "alpha" => Some(ListType::Alpha),
         "roman" => Some(ListType::Roman),
-        "ARAB"  => Some(ListType::Arab),
-        "DASH"  => Some(ListType::Dash),
-        _       => None,
+        "ARAB" => Some(ListType::Arab),
+        "DASH" => Some(ListType::Dash),
+        _ => None,
     }
 }
 
@@ -77,14 +77,27 @@ pub(crate) fn parse_items(node: Node) -> Vec<Item> {
                 let nested_lists: Vec<Node> = np
                     .children()
                     .filter(|n| n.is_element() && n.tag_name().name() == "P")
-                    .flat_map(|p| p.children().filter(|n| n.is_element() && n.tag_name().name() == "LIST"))
+                    .flat_map(|p| {
+                        p.children()
+                            .filter(|n| n.is_element() && n.tag_name().name() == "LIST")
+                    })
                     .collect();
                 if nested_lists.is_empty() {
-                    Item { number, content: ItemContent::Text(text) }
+                    Item {
+                        number,
+                        content: ItemContent::Text(text),
+                    }
                 } else {
                     let list_type = nested_lists.first().and_then(|n| list_type_from(*n));
                     let items = nested_lists.into_iter().flat_map(parse_items).collect();
-                    Item { number, content: ItemContent::List(ListBlock { list_type, intro: text, items }) }
+                    Item {
+                        number,
+                        content: ItemContent::List(ListBlock {
+                            list_type,
+                            intro: text,
+                            items,
+                        }),
+                    }
                 }
             } else {
                 let text = item
@@ -93,7 +106,10 @@ pub(crate) fn parse_items(node: Node) -> Vec<Item> {
                     .map(extract_text)
                     .collect::<Vec<_>>()
                     .join(" ");
-                Item { number, content: ItemContent::Text(text) }
+                Item {
+                    number,
+                    content: ItemContent::Text(text),
+                }
             }
         })
         .collect()
@@ -101,45 +117,61 @@ pub(crate) fn parse_items(node: Node) -> Vec<Item> {
 
 /// Converts a single `<TBL>` element into a [`Subparagraph::Table`].
 pub(crate) fn parse_single_tbl(tbl: Node) -> Subparagraph {
-    let col_count = tbl.attribute("COLS").and_then(|v| v.parse().ok()).unwrap_or(0);
+    let col_count = tbl
+        .attribute("COLS")
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(0);
     let title = tbl
         .children()
         .find(|n| n.is_element() && n.tag_name().name() == "TITLE")
-        .and_then(|t| t.children().find(|n| n.is_element() && n.tag_name().name() == "TI"))
+        .and_then(|t| {
+            t.children()
+                .find(|n| n.is_element() && n.tag_name().name() == "TI")
+        })
         .map(extract_text)
         .filter(|s| !s.is_empty());
-    let rows: Vec<Row> = tbl
-        .children()
-        .find(|n| n.is_element() && n.tag_name().name() == "CORPUS")
-        .into_iter()
-        .flat_map(|corpus| {
-            // CORPUS contains ROW and BLK elements; BLK groups rows (e.g. REACH).
-            corpus.children().filter(|n| n.is_element()).flat_map(|n| {
-                match n.tag_name().name() {
-                    "ROW" => vec![n],
-                    "BLK" => n.children()
-                        .filter(|c| c.is_element() && c.tag_name().name() == "ROW")
-                        .collect(),
-                    _ => vec![],
+    let rows: Vec<Row> =
+        tbl.children()
+            .find(|n| n.is_element() && n.tag_name().name() == "CORPUS")
+            .into_iter()
+            .flat_map(|corpus| {
+                // CORPUS contains ROW and BLK elements; BLK groups rows (e.g. REACH).
+                corpus.children().filter(|n| n.is_element()).flat_map(|n| {
+                    match n.tag_name().name() {
+                        "ROW" => vec![n],
+                        "BLK" => n
+                            .children()
+                            .filter(|c| c.is_element() && c.tag_name().name() == "ROW")
+                            .collect(),
+                        _ => vec![],
+                    }
+                })
+            })
+            .map(|row| {
+                let is_header = row.attribute("TYPE") == Some("HEADER");
+                let cells: Vec<Cell> = row
+                    .children()
+                    .filter(|n| n.is_element() && n.tag_name().name() == "CELL")
+                    .map(|cell| Cell {
+                        text: extract_text(cell),
+                        is_header: cell.attribute("TYPE") == Some("HEADER"),
+                    })
+                    .collect();
+                let cell_count = cells.len();
+                Row {
+                    cells,
+                    cell_count,
+                    is_header,
                 }
             })
-        })
-        .map(|row| {
-            let is_header = row.attribute("TYPE") == Some("HEADER");
-            let cells: Vec<Cell> = row
-                .children()
-                .filter(|n| n.is_element() && n.tag_name().name() == "CELL")
-                .map(|cell| Cell {
-                    text: extract_text(cell),
-                    is_header: cell.attribute("TYPE") == Some("HEADER"),
-                })
-                .collect();
-            let cell_count = cells.len();
-            Row { cells, cell_count, is_header }
-        })
-        .collect();
+            .collect();
     let row_count = rows.len();
-    Subparagraph::Table(Table { col_count, title, rows, row_count })
+    Subparagraph::Table(Table {
+        col_count,
+        title,
+        rows,
+        row_count,
+    })
 }
 
 /// Converts a `<GR.TBL>` element into one [`Subparagraph::Table`] per `<TBL>` child.
@@ -178,10 +210,7 @@ pub(crate) fn parse_block_children(node: Node) -> Vec<Subparagraph> {
                 // If so, expand those blocks directly with no intro.
                 let nested_blocks: Vec<_> = child
                     .children()
-                    .filter(|n| {
-                        n.is_element()
-                            && matches!(n.tag_name().name(), "LIST" | "TBL")
-                    })
+                    .filter(|n| n.is_element() && matches!(n.tag_name().name(), "LIST" | "TBL"))
                     .collect();
                 if !nested_blocks.is_empty() {
                     if let Some(t) = pending.take() {

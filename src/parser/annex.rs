@@ -7,10 +7,13 @@
 
 use roxmltree::{Document, Node};
 
+use super::text::extract_text;
+use super::{
+    child, extract_citations, list_type_from, parse_block_children, parse_items, parse_single_tbl,
+    parse_table,
+};
 use crate::error::Error;
 use crate::model::*;
-use super::{child, extract_citations, list_type_from, parse_block_children, parse_items, parse_single_tbl, parse_table};
-use super::text::extract_text;
 
 /// Parses a Formex annex XML string (`<ANNEX>` root) into an [`Annex`].
 ///
@@ -84,7 +87,11 @@ fn parse_annex_node(root: Node) -> Result<Annex, Error> {
         })
         .unwrap_or(AnnexContent::Paragraphs(vec![]));
 
-    Ok(Annex { number, subtitle, content })
+    Ok(Annex {
+        number,
+        subtitle,
+        content,
+    })
 }
 
 /// Collects all top-level `<GR.SEQ>` children of `node` as [`AnnexSection`]s.
@@ -95,11 +102,18 @@ fn parse_annex_sections(node: Node) -> Vec<AnnexSection> {
             let title = gr
                 .children()
                 .find(|n| n.is_element() && n.tag_name().name() == "TITLE")
-                .and_then(|t| t.children().find(|n| n.is_element() && n.tag_name().name() == "TI"))
+                .and_then(|t| {
+                    t.children()
+                        .find(|n| n.is_element() && n.tag_name().name() == "TI")
+                })
                 .map(extract_text)
                 .unwrap_or_default();
             let citations = extract_citations(gr);
-            AnnexSection { title, alineas: parse_block_children(gr), citations }
+            AnnexSection {
+                title,
+                alineas: parse_block_children(gr),
+                citations,
+            }
         })
         .collect()
 }
@@ -121,7 +135,11 @@ fn parse_annex_paragraphs(node: Node) -> Vec<Paragraph> {
             alineas.push(Subparagraph::Text(t));
         }
         if !alineas.is_empty() {
-            result.push(Paragraph { number: None, alineas: std::mem::take(alineas), citations: vec![] });
+            result.push(Paragraph {
+                number: None,
+                alineas: std::mem::take(alineas),
+                citations: vec![],
+            });
         }
     };
 
@@ -134,9 +152,7 @@ fn parse_annex_paragraphs(node: Node) -> Vec<Paragraph> {
             "P" => {
                 let nested_blocks: Vec<_> = elem
                     .children()
-                    .filter(|n| {
-                        n.is_element() && matches!(n.tag_name().name(), "LIST" | "TBL")
-                    })
+                    .filter(|n| n.is_element() && matches!(n.tag_name().name(), "LIST" | "TBL"))
                     .collect();
                 if !nested_blocks.is_empty() {
                     if let Some(t) = pending_intro.take() {
@@ -218,7 +234,10 @@ fn np_to_paragraph(node: Node) -> Paragraph {
     let nested_lists: Vec<Node> = node
         .children()
         .filter(|n| n.is_element() && n.tag_name().name() == "P")
-        .flat_map(|p| p.children().filter(|n| n.is_element() && n.tag_name().name() == "LIST"))
+        .flat_map(|p| {
+            p.children()
+                .filter(|n| n.is_element() && n.tag_name().name() == "LIST")
+        })
         .collect();
 
     let alineas = if nested_lists.is_empty() {
@@ -230,11 +249,19 @@ fn np_to_paragraph(node: Node) -> Paragraph {
     } else {
         let list_type = nested_lists.first().and_then(|n| list_type_from(*n));
         let items = nested_lists.into_iter().flat_map(parse_items).collect();
-        vec![Subparagraph::List(ListBlock { list_type, intro: txt, items })]
+        vec![Subparagraph::List(ListBlock {
+            list_type,
+            intro: txt,
+            items,
+        })]
     };
 
     let citations = extract_citations(node);
-    Paragraph { number, alineas, citations }
+    Paragraph {
+        number,
+        alineas,
+        citations,
+    }
 }
 
 #[cfg(test)]
@@ -273,7 +300,10 @@ mod tests {
     /// An `<ANNEX>` with no `<TITLE>` element returns a `MissingElement` error.
     fn parse_annex_missing_title() {
         let result = parse_annex("<ANNEX><CONTENTS/></ANNEX>");
-        assert!(matches!(result, Err(crate::error::Error::MissingElement(_))));
+        assert!(matches!(
+            result,
+            Err(crate::error::Error::MissingElement(_))
+        ));
     }
 
     // ── parse_cons_annex ────────────────────────────────────────────────
@@ -369,7 +399,9 @@ mod tests {
         assert_eq!(sections.len(), 2);
         assert_eq!(sections[0].title, "Part A");
         assert_eq!(sections[0].alineas.len(), 1);
-        assert!(matches!(&sections[0].alineas[0], Subparagraph::Text(t) if t == "Content paragraph."));
+        assert!(
+            matches!(&sections[0].alineas[0], Subparagraph::Text(t) if t == "Content paragraph.")
+        );
         assert_eq!(sections[1].title, "Part B");
     }
 

@@ -4,15 +4,13 @@ use std::sync::LazyLock;
 use regex::Regex;
 use roxmltree::Node;
 
-use crate::model::{CitedActType, Citation, OjRef};
+use crate::model::{Citation, CitedActType, OjRef};
 
 // Pattern A — prefix-regime style: Regulation (EU) 2022/2065, Directive (EC) No 207/2009,
 // Regulation (EC) No 40/94 (old 2-digit-year form).
 static RE_PREFIX: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(
-        r"(Regulation|Directive|Decision)\s+\((EU|EC|EEC|EURATOM)\)\s*(?:No\s+)?(\d+/\d+)",
-    )
-    .unwrap()
+    Regex::new(r"(Regulation|Directive|Decision)\s+\((EU|EC|EEC|EURATOM)\)\s*(?:No\s+)?(\d+/\d+)")
+        .unwrap()
 });
 
 // Pattern B — suffix-regime style: Directive 2008/95/EC, Directive 89/104/EEC,
@@ -72,7 +70,12 @@ fn find_oj_ref(node: Node) -> Option<OjRef> {
             let number = desc.attribute("NO.OJ")?.to_string();
             let date = desc.attribute("DATE.PUB")?.to_string();
             let page = desc.attribute("PAGE.FIRST")?.parse().ok()?;
-            return Some(OjRef { collection, number, date, page });
+            return Some(OjRef {
+                collection,
+                number,
+                date,
+                page,
+            });
         }
     }
     None
@@ -188,7 +191,12 @@ pub(crate) fn extract_citations(node: Node) -> Vec<Citation> {
     for (act_type, regime, number) in all_matches(&inline) {
         let key = dedup_key(&act_type, &number);
         if seen.insert(key) {
-            result.push(Citation { act_type, regime: Some(regime), number, oj_ref: None });
+            result.push(Citation {
+                act_type,
+                regime: Some(regime),
+                number,
+                oj_ref: None,
+            });
         }
     }
 
@@ -212,12 +220,22 @@ mod tests {
 
     /// Constructs an [`OjRef`] from its four fields for use in assertions.
     fn oj(collection: &str, number: &str, date: &str, page: u32) -> OjRef {
-        OjRef { collection: collection.into(), number: number.into(), date: date.into(), page }
+        OjRef {
+            collection: collection.into(),
+            number: number.into(),
+            date: date.into(),
+            page,
+        }
     }
 
     /// Constructs a [`Citation`] with `regime` set, for use in assertions.
     fn cit(act_type: CitedActType, regime: &str, number: &str, oj_ref: Option<OjRef>) -> Citation {
-        Citation { act_type, regime: Some(regime.into()), number: number.into(), oj_ref }
+        Citation {
+            act_type,
+            regime: Some(regime.into()),
+            number: number.into(),
+            oj_ref,
+        }
     }
 
     // ── 1. NOTE with (EC) No style and REF.DOC.OJ ────────────────────────────
@@ -231,7 +249,12 @@ mod tests {
         assert_eq!(result.len(), 1);
         assert_eq!(
             result[0],
-            cit(CitedActType::Regulation, "EC", "207/2009", Some(oj("L", "078", "20090324", 1)))
+            cit(
+                CitedActType::Regulation,
+                "EC",
+                "207/2009",
+                Some(oj("L", "078", "20090324", 1))
+            )
         );
     }
 
@@ -246,7 +269,12 @@ mod tests {
         assert_eq!(result.len(), 1);
         assert_eq!(
             result[0],
-            cit(CitedActType::Regulation, "EU", "2022/2065", Some(oj("L", "277", "20221027", 1)))
+            cit(
+                CitedActType::Regulation,
+                "EU",
+                "2022/2065",
+                Some(oj("L", "277", "20221027", 1))
+            )
         );
     }
 
@@ -265,7 +293,10 @@ mod tests {
         assert_eq!(c.regime, Some("EU".into()));
         assert_eq!(c.oj_ref, Some(oj("L", "181", "20130629", 15)));
         let ec_1383 = result.iter().find(|c| c.number == "1383/2003");
-        assert!(ec_1383.is_none(), "secondary 'repealing' mention must not be extracted");
+        assert!(
+            ec_1383.is_none(),
+            "secondary 'repealing' mention must not be extracted"
+        );
     }
 
     // ── 4. Inline citation (EU) No style without NOTE ─────────────────────────
@@ -277,7 +308,10 @@ mod tests {
         let xml = r#"<CONSID><NP><NO.P>(18)</NO.P><TXT>Article 28 of Regulation (EU) No 608/2013 provides that a right holder is to be liable for damages towards the holder of the goods where, inter alia, the goods in question are subsequently found not to infringe an intellectual property right.</TXT></NP></CONSID>"#;
         let result = citations(xml);
         assert_eq!(result.len(), 1);
-        assert_eq!(result[0], cit(CitedActType::Regulation, "EU", "608/2013", None));
+        assert_eq!(
+            result[0],
+            cit(CitedActType::Regulation, "EU", "608/2013", None)
+        );
     }
 
     // ── 5. Multiple inline citations with no NOTEs ────────────────────────────
@@ -304,8 +338,15 @@ mod tests {
         let xml = r#"<CONSID><NP><NO.P>(16)</NO.P><TXT>In performing customs controls, the customs authorities should make use of the powers and procedures laid down in Regulation (EU) No 608/2013 of the European Parliament and the Council<NOTE NOTE.ID="E0008" NUMBERING="ARAB" TYPE="FOOTNOTE"><P>Regulation (EU) No 608/2013 of the European Parliament and of the Council of <DATE ISO="20130612">12 June 2013</DATE> concerning customs enforcement of intellectual property rights and repealing Council Regulation (EC) No 1383/2003 (<REF.DOC.OJ COLL="L" DATE.PUB="20130629" NO.OJ="181" PAGE.FIRST="15">OJ L 181, 29.6.2013, p. 15</REF.DOC.OJ>).</P></NOTE>, also at the request of the right holders.</TXT></NP></CONSID>"#;
         let result = citations(xml);
         let eu_608: Vec<_> = result.iter().filter(|c| c.number == "608/2013").collect();
-        assert_eq!(eu_608.len(), 1, "608/2013 must appear exactly once after dedup");
-        assert!(eu_608[0].oj_ref.is_some(), "note entry (with OJ ref) must win over inline");
+        assert_eq!(
+            eu_608.len(),
+            1,
+            "608/2013 must appear exactly once after dedup"
+        );
+        assert!(
+            eu_608[0].oj_ref.is_some(),
+            "note entry (with OJ ref) must win over inline"
+        );
     }
 
     // ── 7. Old EEC suffix style ───────────────────────────────────────────────
@@ -349,9 +390,24 @@ mod tests {
         let xml = r#"<CONSID><NP><NO.P>(2)</NO.P><TXT>Council Regulation (EC) No 40/94<NOTE NOTE.ID="E0004" NUMBERING="ARAB" TYPE="FOOTNOTE"><P>Council Regulation (EC) No 40/94 of <DATE ISO="19931220">20 December 1993</DATE> on the Community trade mark (<REF.DOC.OJ COLL="L" DATE.PUB="19940114" NO.OJ="011" PAGE.FIRST="1">OJ L 11, 14.1.1994, p. 1</REF.DOC.OJ>).</P></NOTE>, which was codified in 2009 as Regulation (EC) No 207/2009, created a system of trade mark protection specific to the Union which provided for the protection of trade marks at the level of the Union, in parallel to the protection of trade marks available at the level of the Member States in accordance with the national trade mark systems, harmonised by Council Directive 89/104/EEC<NOTE NOTE.ID="E0005" NUMBERING="ARAB" TYPE="FOOTNOTE"><P>First Council Directive 89/104/EEC of <DATE ISO="19881221">21 December 1988</DATE> to approximate the laws of the Member States relating to trade marks (<REF.DOC.OJ COLL="L" DATE.PUB="19890211" NO.OJ="040" PAGE.FIRST="1">OJ L 40, 11.2.1989, p. 1</REF.DOC.OJ>).</P></NOTE>, which was codified as Directive 2008/95/EC of the European Parliament and of the Council<NOTE NOTE.ID="E0006" NUMBERING="ARAB" TYPE="FOOTNOTE"><P>Directive 2008/95/EC of the European Parliament and of the Council of <DATE ISO="20081022">22 October 2008</DATE> to approximate the laws of the Member States relating to trade marks (<REF.DOC.OJ COLL="L" DATE.PUB="20081108" NO.OJ="299" PAGE.FIRST="25">OJ L 299, 8.11.2008, p. 25</REF.DOC.OJ>).</P></NOTE>.</TXT></NP></CONSID>"#;
         let result = citations(xml);
         // Three NOTEs each contribute one citation with OJ ref.
-        assert!(result.contains(&cit(CitedActType::Regulation, "EC", "40/94",   Some(oj("L", "011", "19940114", 1)))));
-        assert!(result.contains(&cit(CitedActType::Directive,  "EEC", "89/104", Some(oj("L", "040", "19890211", 1)))));
-        assert!(result.contains(&cit(CitedActType::Directive,  "EC", "2008/95", Some(oj("L", "299", "20081108", 25)))));
+        assert!(result.contains(&cit(
+            CitedActType::Regulation,
+            "EC",
+            "40/94",
+            Some(oj("L", "011", "19940114", 1))
+        )));
+        assert!(result.contains(&cit(
+            CitedActType::Directive,
+            "EEC",
+            "89/104",
+            Some(oj("L", "040", "19890211", 1))
+        )));
+        assert!(result.contains(&cit(
+            CitedActType::Directive,
+            "EC",
+            "2008/95",
+            Some(oj("L", "299", "20081108", 25))
+        )));
         // Inline text also mentions "207/2009" (no NOTE for it in this recital).
         assert!(result.contains(&cit(CitedActType::Regulation, "EC", "207/2009", None)));
     }
@@ -364,10 +420,30 @@ mod tests {
     fn four_notes_in_one_recital() {
         let xml = r#"<CONSID><NP><NO.P>(10)</NO.P><TXT>The fundamental right to the protection of personal data is safeguarded in particular by Regulations (EU) 2016/679<NOTE NOTE.ID="E0011" NUMBERING.CONTINUED="YES"><P>Regulation (EU) 2016/679 of the European Parliament and of the Council of <DATE ISO="20160427">27 April 2016</DATE> on the protection of natural persons with regard to the processing of personal data and on the free movement of such data, and repealing Directive 95/46/EC (General Data Protection Regulation) (<REF.DOC.OJ COLL="L" DATE.PUB="20160504" NO.OJ="119" PAGE.FIRST="1">OJ L 119, 4.5.2016, p. 1</REF.DOC.OJ>).</P></NOTE> and (EU) 2018/1725<NOTE NOTE.ID="E0012" NUMBERING.CONTINUED="YES"><P>Regulation (EU) 2018/1725 of the European Parliament and of the Council of <DATE ISO="20181023">23 October 2018</DATE> on the protection of natural persons with regard to the processing of personal data by the Union institutions, bodies, offices and agencies and on the free movement of such data, and repealing Regulation (EC) No 45/2001 and Decision No 1247/2002/EC (<REF.DOC.OJ COLL="L" DATE.PUB="20181121" NO.OJ="295" PAGE.FIRST="39">OJ L 295, 21.11.2018, p. 39</REF.DOC.OJ>).</P></NOTE> of the European Parliament and of the Council and Directive (EU) 2016/680 of the European Parliament and of the Council<NOTE NOTE.ID="E0013" NUMBERING.CONTINUED="YES"><P>Directive (EU) 2016/680 of the European Parliament and of the Council of <DATE ISO="20160427">27 April 2016</DATE> on the protection of natural persons with regard to the processing of personal data by competent authorities for the purposes of the prevention, investigation, detection or prosecution of criminal offences or the execution of criminal penalties, and on the free movement of such data, and repealing Council Framework Decision 2008/977/JHA (<REF.DOC.OJ COLL="L" DATE.PUB="20160504" NO.OJ="119" PAGE.FIRST="89">OJ L 119, 4.5.2016, p. 89</REF.DOC.OJ>).</P></NOTE>. Directive 2002/58/EC of the European Parliament and of the Council<NOTE NOTE.ID="E0014" NUMBERING.CONTINUED="YES"><P>Directive 2002/58/EC of the European Parliament and of the Council of <DATE ISO="20020712">12 July 2002</DATE> concerning the processing of personal data and the protection of privacy in the electronic communications sector (Directive on privacy and electronic communications) (<REF.DOC.OJ COLL="L" DATE.PUB="20020731" NO.OJ="201" PAGE.FIRST="37">OJ L 201, 31.7.2002, p. 37</REF.DOC.OJ>).</P></NOTE> additionally protects private life and the confidentiality of communication.</TXT></NP></CONSID>"#;
         let result = citations(xml);
-        assert!(result.contains(&cit(CitedActType::Regulation, "EU", "2016/679",  Some(oj("L", "119", "20160504", 1)))));
-        assert!(result.contains(&cit(CitedActType::Regulation, "EU", "2018/1725", Some(oj("L", "295", "20181121", 39)))));
-        assert!(result.contains(&cit(CitedActType::Directive,  "EU", "2016/680",  Some(oj("L", "119", "20160504", 89)))));
-        assert!(result.contains(&cit(CitedActType::Directive,  "EC", "2002/58",   Some(oj("L", "201", "20020731", 37)))));
+        assert!(result.contains(&cit(
+            CitedActType::Regulation,
+            "EU",
+            "2016/679",
+            Some(oj("L", "119", "20160504", 1))
+        )));
+        assert!(result.contains(&cit(
+            CitedActType::Regulation,
+            "EU",
+            "2018/1725",
+            Some(oj("L", "295", "20181121", 39))
+        )));
+        assert!(result.contains(&cit(
+            CitedActType::Directive,
+            "EU",
+            "2016/680",
+            Some(oj("L", "119", "20160504", 89))
+        )));
+        assert!(result.contains(&cit(
+            CitedActType::Directive,
+            "EC",
+            "2002/58",
+            Some(oj("L", "201", "20020731", 37))
+        )));
     }
 
     // ── 11. NOTE without any act citation is ignored ──────────────────────────
@@ -425,7 +501,10 @@ mod tests {
         let xml = r#"<GR.SEQ><TITLE><TI><P>Part A</P></TI></TITLE><P>As listed in Regulation (EU) 2024/1689<NOTE NOTE.ID="X1" NUMBERING.CONTINUED="YES"><P>Regulation (EU) 2024/1689 (<REF.DOC.OJ COLL="L" DATE.PUB="20240712" NO.OJ="1689" PAGE.FIRST="1">OJ L 1689, 12.7.2024, p. 1</REF.DOC.OJ>).</P></NOTE>.</P></GR.SEQ>"#;
         let result = citations(xml);
         let c = result.iter().find(|c| c.number == "2024/1689");
-        assert!(c.is_some(), "expected Regulation (EU) 2024/1689 from GR.SEQ");
+        assert!(
+            c.is_some(),
+            "expected Regulation (EU) 2024/1689 from GR.SEQ"
+        );
         let c = c.unwrap();
         assert_eq!(c.act_type, CitedActType::Regulation);
         assert_eq!(c.regime, Some("EU".into()));

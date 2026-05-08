@@ -6,13 +6,18 @@
 use std::path::Path;
 
 use eur_lex_lib::loader::load_act;
-use eur_lex_lib::model::{Act, AnnexContent, ChapterContents, CitedActType, Citation, Item, ItemContent, OfficialJournal, OjRef, Subparagraph};
+use eur_lex_lib::model::{
+    Act, AnnexContent, ArticleContent, ChapterContents, Citation, CitedActType, Item, ItemContent,
+    OfficialJournal, OjRef, Subparagraph,
+};
 
 #[test]
 fn trademark_act_structure() {
     let act = load_act(Path::new("data/32017R1001"))
         .expect("failed to load TrademarkAct from data/32017R1001");
-    let Act::Regular(reg) = act else { panic!("TrademarkAct should be a Regular act") };
+    let Act::Regular(reg) = act else {
+        panic!("TrademarkAct should be a Regular act")
+    };
 
     // Title must identify the act number.
     assert!(
@@ -30,7 +35,11 @@ fn trademark_act_structure() {
     );
 
     // Enacting terms: 14 chapters, 212 articles total.
-    assert_eq!(reg.enacting_terms.chapters.len(), 14, "unexpected chapter count");
+    assert_eq!(
+        reg.enacting_terms.chapters.len(),
+        14,
+        "unexpected chapter count"
+    );
 
     let total_articles: usize = reg
         .enacting_terms
@@ -45,9 +54,21 @@ fn trademark_act_structure() {
 
     // 3 annexes, all identified as ANNEX I / II / III.
     assert_eq!(reg.annexes.len(), 3, "unexpected annex count");
-    assert!(reg.annexes[0].number.contains("ANNEX I"), "annex 0: {}", reg.annexes[0].number);
-    assert!(reg.annexes[1].number.contains("ANNEX II"), "annex 1: {}", reg.annexes[1].number);
-    assert!(reg.annexes[2].number.contains("ANNEX III"), "annex 2: {}", reg.annexes[2].number);
+    assert!(
+        reg.annexes[0].number.contains("ANNEX I"),
+        "annex 0: {}",
+        reg.annexes[0].number
+    );
+    assert!(
+        reg.annexes[1].number.contains("ANNEX II"),
+        "annex 1: {}",
+        reg.annexes[1].number
+    );
+    assert!(
+        reg.annexes[2].number.contains("ANNEX III"),
+        "annex 2: {}",
+        reg.annexes[2].number
+    );
 
     // Chapter I (idx 0): 3 direct articles.
     let ch1_arts = match &reg.enacting_terms.chapters[0].contents {
@@ -56,23 +77,30 @@ fn trademark_act_structure() {
     };
     assert_eq!(ch1_arts.len(), 3, "Chapter I should have 3 articles");
 
-    // Article 1 ("EU trade mark"): 2 paragraphs, first is a plain Paragraph.
+    // Article 1 ("EU trade mark"): 2 paragraphs, first is a plain text alinea.
     let art1 = &ch1_arts[0];
     assert_eq!(art1.number, "Article 1");
     assert_eq!(art1.title.as_deref(), Some("EU trade mark"));
-    assert_eq!(art1.paragraphs.len(), 2);
-    assert_eq!(art1.paragraphs[0].number.as_deref(), Some("1."));
-    assert_eq!(art1.paragraphs[0].alineas.len(), 1);
-    assert!(matches!(&art1.paragraphs[0].alineas[0], Subparagraph::Text(_)));
+    let ArticleContent::Paragraphs(ref art1_paras) = art1.content else {
+        panic!("Article 1 should have Paragraphs content");
+    };
+    assert_eq!(art1_paras.len(), 2);
+    assert_eq!(art1_paras[0].number, "1.");
+    assert_eq!(art1_paras[0].alineas.len(), 1);
+    assert!(matches!(
+        &art1_paras[0].alineas[0].content[0],
+        Subparagraph::Text(_)
+    ));
 
     // Article 3 ("Capacity to act"): bare <ALINEA> (plain text, no block children)
-    // → 1 unnamed paragraph with 1 plain Text block.
+    // → 1 Alinea with 1 plain Text block.
     let art3 = &ch1_arts[2];
     assert_eq!(art3.number, "Article 3");
-    assert_eq!(art3.paragraphs.len(), 1);
-    assert!(art3.paragraphs[0].number.is_none(), "bare-alinea paragraph should have no number");
-    assert_eq!(art3.paragraphs[0].alineas.len(), 1);
-    assert!(matches!(&art3.paragraphs[0].alineas[0], Subparagraph::Text(_)));
+    let ArticleContent::Alineas(ref art3_alineas) = art3.content else {
+        panic!("Article 3 should have Alineas content");
+    };
+    assert_eq!(art3_alineas.len(), 1);
+    assert!(matches!(&art3_alineas[0].content[0], Subparagraph::Text(_)));
 
     // Chapter II (idx 1): 4 sections.
     let ch2_secs = match &reg.enacting_terms.chapters[1].contents {
@@ -85,19 +113,36 @@ fn trademark_act_structure() {
     // Article 7 ("Absolute grounds for refusal") is at index 3 of section 1.
     // Para 1 has <P> intro + 13 list items = 14 alinea blocks.
     let sec1_arts = &ch2_secs[0].articles;
-    assert_eq!(sec1_arts.len(), 5, "Chapter II section 1 should have 5 articles");
+    assert_eq!(
+        sec1_arts.len(),
+        5,
+        "Chapter II section 1 should have 5 articles"
+    );
     let art7 = &sec1_arts[3];
     assert_eq!(art7.number, "Article 7");
     assert_eq!(art7.title.as_deref(), Some("Absolute grounds for refusal"));
-    let p1 = &art7.paragraphs[0];
-    assert_eq!(p1.number.as_deref(), Some("1."));
-    assert_eq!(p1.alineas.len(), 1, "Article 7 para 1 should be a single List block");
-    match &p1.alineas[0] {
+    let ArticleContent::Paragraphs(ref art7_paras) = art7.content else {
+        panic!("Article 7 should have Paragraphs content");
+    };
+    let p1 = &art7_paras[0];
+    assert_eq!(p1.number, "1.");
+    assert_eq!(p1.alineas.len(), 1, "Article 7 para 1 should have 1 alinea");
+    match &p1.alineas[0].content[0] {
         Subparagraph::List(lb) => {
-            assert_eq!(lb.items.len(), 13, "Article 7 para 1 list should have 13 items");
-            assert!(matches!(&lb.items[0], Item { number: 1, content: ItemContent::Text(_) }));
+            assert_eq!(
+                lb.items.len(),
+                13,
+                "Article 7 para 1 list should have 13 items"
+            );
+            assert!(matches!(
+                &lb.items[0],
+                Item {
+                    number: 1,
+                    content: ItemContent::Text(_)
+                }
+            ));
         }
-        _ => panic!("Article 7 para 1 alineas[0] should be a List"),
+        _ => panic!("Article 7 para 1 alineas[0].content[0] should be a List"),
     }
 
     // Chapter V (idx 4): 5 direct articles.
@@ -121,27 +166,41 @@ fn trademark_act_structure() {
     );
 
     // No Definitions article → definitions map is empty.
-    assert!(reg.definitions.is_empty(), "TrademarkAct should have no definitions");
+    assert!(
+        reg.definitions.is_empty(),
+        "TrademarkAct should have no definitions"
+    );
 }
 
 #[test]
 fn trademark_act_recital_citations() {
     let act = load_act(Path::new("data/32017R1001"))
         .expect("failed to load TrademarkAct from data/32017R1001");
-    let Act::Regular(reg) = act else { panic!("TrademarkAct should be a Regular act") };
+    let Act::Regular(reg) = act else {
+        panic!("TrademarkAct should be a Regular act")
+    };
 
     let recitals = &reg.preamble.recitals;
 
     // Recital (1): cites Council Regulation (EC) No 207/2009 via NOTE with OJ ref.
     // Source: L_2017154EN.01000101.xml, first CONSID.
-    assert_eq!(recitals[0].citations.len(), 1, "recital (1) should have exactly 1 citation");
+    assert_eq!(
+        recitals[0].citations.len(),
+        1,
+        "recital (1) should have exactly 1 citation"
+    );
     assert_eq!(
         recitals[0].citations[0],
         Citation {
             act_type: CitedActType::Regulation,
             regime: Some("EC".into()),
             number: "207/2009".into(),
-            oj_ref: Some(OjRef { collection: "L".into(), number: "078".into(), date: "20090324".into(), page: 1 }),
+            oj_ref: Some(OjRef {
+                collection: "L".into(),
+                number: "078".into(),
+                date: "20090324".into(),
+                page: 1
+            }),
         },
         "recital (1): unexpected citation"
     );
@@ -151,24 +210,55 @@ fn trademark_act_recital_citations() {
     // "207/2009" also appears inline in the text body).
     let r2 = &recitals[1].citations;
     assert!(
-        r2.contains(&Citation { act_type: CitedActType::Regulation, regime: Some("EC".into()), number: "40/94".into(),
-            oj_ref: Some(OjRef { collection: "L".into(), number: "011".into(), date: "19940114".into(), page: 1 }) }),
+        r2.contains(&Citation {
+            act_type: CitedActType::Regulation,
+            regime: Some("EC".into()),
+            number: "40/94".into(),
+            oj_ref: Some(OjRef {
+                collection: "L".into(),
+                number: "011".into(),
+                date: "19940114".into(),
+                page: 1
+            })
+        }),
         "recital (2): missing (EC) No 40/94 with OJ ref"
     );
     assert!(
-        r2.contains(&Citation { act_type: CitedActType::Directive, regime: Some("EEC".into()), number: "89/104".into(),
-            oj_ref: Some(OjRef { collection: "L".into(), number: "040".into(), date: "19890211".into(), page: 1 }) }),
+        r2.contains(&Citation {
+            act_type: CitedActType::Directive,
+            regime: Some("EEC".into()),
+            number: "89/104".into(),
+            oj_ref: Some(OjRef {
+                collection: "L".into(),
+                number: "040".into(),
+                date: "19890211".into(),
+                page: 1
+            })
+        }),
         "recital (2): missing 89/104/EEC with OJ ref"
     );
     assert!(
-        r2.contains(&Citation { act_type: CitedActType::Directive, regime: Some("EC".into()), number: "2008/95".into(),
-            oj_ref: Some(OjRef { collection: "L".into(), number: "299".into(), date: "20081108".into(), page: 25 }) }),
+        r2.contains(&Citation {
+            act_type: CitedActType::Directive,
+            regime: Some("EC".into()),
+            number: "2008/95".into(),
+            oj_ref: Some(OjRef {
+                collection: "L".into(),
+                number: "299".into(),
+                date: "20081108".into(),
+                page: 25
+            })
+        }),
         "recital (2): missing 2008/95/EC with OJ ref"
     );
     // Inline mention of 207/2009 in the recital body (no NOTE for it in recital (2)).
     assert!(
-        r2.contains(&Citation { act_type: CitedActType::Regulation, regime: Some("EC".into()),
-            number: "207/2009".into(), oj_ref: None }),
+        r2.contains(&Citation {
+            act_type: CitedActType::Regulation,
+            regime: Some("EC".into()),
+            number: "207/2009".into(),
+            oj_ref: None
+        }),
         "recital (2): missing inline 207/2009 (no OJ ref)"
     );
 
@@ -177,23 +267,39 @@ fn trademark_act_recital_citations() {
     // Source: L_2017154EN.01000101.xml, CONSID (16).
     let r16 = &recitals[15].citations;
     let eu_608: Vec<_> = r16.iter().filter(|c| c.number == "608/2013").collect();
-    assert_eq!(eu_608.len(), 1, "recital (16): 608/2013 must appear exactly once");
-    assert!(eu_608[0].oj_ref.is_some(), "recital (16): NOTE entry (with OJ ref) must win over inline");
+    assert_eq!(
+        eu_608.len(),
+        1,
+        "recital (16): 608/2013 must appear exactly once"
+    );
+    assert!(
+        eu_608[0].oj_ref.is_some(),
+        "recital (16): NOTE entry (with OJ ref) must win over inline"
+    );
     assert_eq!(eu_608[0].regime, Some("EU".into()));
 
     // Recital (18): "(EU) No 608/2013" inline only — no NOTE, so no OJ ref.
     // Source: L_2017154EN.01000101.xml, CONSID (18).
     let r18 = &recitals[17].citations;
     let eu_608_inline: Vec<_> = r18.iter().filter(|c| c.number == "608/2013").collect();
-    assert_eq!(eu_608_inline.len(), 1, "recital (18): should have exactly one 608/2013 citation");
-    assert!(eu_608_inline[0].oj_ref.is_none(), "recital (18): inline-only citation must have no OJ ref");
+    assert_eq!(
+        eu_608_inline.len(),
+        1,
+        "recital (18): should have exactly one 608/2013 citation"
+    );
+    assert!(
+        eu_608_inline[0].oj_ref.is_none(),
+        "recital (18): inline-only citation must have no OJ ref"
+    );
 }
 
 #[test]
 fn trademark_act_metadata() {
     let act = load_act(Path::new("data/32017R1001"))
         .expect("failed to load Trademark Act from data/32017R1001");
-    let Act::Regular(reg) = act else { panic!("Trademark Act should be a Regular act") };
+    let Act::Regular(reg) = act else {
+        panic!("Trademark Act should be a Regular act")
+    };
     let md = &reg.metadata;
 
     assert_eq!(md.prod_id.as_deref(), Some("20170608012"));
@@ -201,11 +307,17 @@ fn trademark_act_metadata() {
     assert_eq!(md.authors, vec!["PE", "CS"]);
     assert!(md.eea_relevant, "Trademark Act should be EEA relevant");
 
-    let oj = md.official_journal.as_ref().expect("official_journal should be present");
-    assert_eq!(*oj, OfficialJournal {
-        collection: "L".to_string(),
-        number: "154".to_string(),
-        date: "20170616".to_string(),
-        language: "EN".to_string(),
-    });
+    let oj = md
+        .official_journal
+        .as_ref()
+        .expect("official_journal should be present");
+    assert_eq!(
+        *oj,
+        OfficialJournal {
+            collection: "L".to_string(),
+            number: "154".to_string(),
+            date: "20170616".to_string(),
+            language: "EN".to_string(),
+        }
+    );
 }
