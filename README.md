@@ -1,4 +1,4 @@
-[![codecov](https://codecov.io/github/rv1nc3nt/eur-lex-lib/graph/badge.svg?token=9TA1JUZKRF)](https://codecov.io/github/rv1nc3nt/eur-lex-lib)
+[![codecov](https://codecov.io/github/eur-lex-rs/eur-lex-lib/graph/badge.svg?token=6TH7gBGvLu)](https://codecov.io/github/eur-lex-rs/eur-lex-lib)
 
 # eur-lex-lib
 
