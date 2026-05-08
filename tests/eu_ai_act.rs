@@ -171,7 +171,7 @@ fn eu_ai_act_structure() {
     };
     let iii_list = iii_paragraphs
         .iter()
-        .flat_map(|p| p.alineas.iter())
+        .flat_map(|p| p.subparagraphs().iter())
         .find_map(|b| {
             if let Subparagraph::List(lb) = b {
                 Some(lb)
@@ -221,7 +221,7 @@ fn eu_ai_act_structure() {
     };
     let iv_list = iv_paragraphs
         .iter()
-        .flat_map(|p| p.alineas.iter())
+        .flat_map(|p| p.subparagraphs().iter())
         .find_map(|b| {
             if let Subparagraph::List(lb) = b {
                 Some(lb)

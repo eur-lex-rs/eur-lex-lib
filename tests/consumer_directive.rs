@@ -76,7 +76,7 @@ fn consumer_directive_structure() {
     // Annex II contains the GR.TBL correlation table → at least one Table subparagraph.
     if let AnnexContent::Paragraphs(paras) = &act.annexes[1].content {
         let has_table = paras.iter().any(|p| {
-            p.alineas
+            p.subparagraphs()
                 .iter()
                 .any(|a| matches!(a, Subparagraph::Table(_)))
         });
