@@ -251,9 +251,12 @@ fn parse_section(node: Node) -> Result<Section, Error> {
 
 /// Parses an `<ARTICLE>` element.
 ///
-/// When `<PARAG>` wrappers are present each becomes a [`LegalParagraph`].
-/// Some articles (e.g. Article 113 of the EU AI Act) contain bare `<ALINEA>`
-/// elements with no `<PARAG>` wrapper; each becomes an [`Alinea`] directly.
+/// Detection priority:
+/// 1. `<SUBDIV>` children present → [`ArticleContent::Subdivisions`]
+///    (e.g. Article 2 of the Anti-Dumping Regulation 32016R1036).
+/// 2. `<PARAG>` wrappers present → [`ArticleContent::Paragraphs`].
+/// 3. Bare `<ALINEA>` children → [`ArticleContent::Alineas`]
+///    (e.g. Article 113 of the EU AI Act 32024R1689).
 fn parse_article(node: Node) -> Result<Article, Error> {
     let number = node
         .children()
@@ -610,8 +613,10 @@ mod tests {
     }
 
     #[test]
+    /// An `<ARTICLE>` with bare `<ALINEA>` children and no `<PARAG>` wrapper produces
+    /// `ArticleContent::Alineas`. Mirrors Article 113 of the EU AI Act (32024R1689) and
+    /// Articles 22, 24, 25 of the Anti-Dumping Regulation (32016R1036).
     fn article_bare_alineas_become_alineas_variant() {
-        // Some articles have no <PARAG> wrapper — alineas sit directly under <ARTICLE>.
         let xml = r#"<ARTICLE>
             <TI.ART>Article 113</TI.ART>
             <ALINEA>Only text.</ALINEA>

@@ -312,7 +312,7 @@ pub struct Article {
     /// Optional article title, e.g. `"Classification rules for high-risk AI systems"`
     /// (from `<STI.ART>`).
     pub title: Option<String>,
-    /// The content of the article: either numbered paragraphs or bare alineas.
+    /// The content of the article: numbered paragraphs, bare alineas, or thematic subdivisions.
     pub content: ArticleContent,
 }
 

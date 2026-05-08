@@ -121,8 +121,9 @@ fn parse_annex_sections(node: Node) -> Vec<AnnexSection> {
 /// Parses flat annex content as a sequence of [`AnnexParagraph`]s.
 ///
 /// Each top-level `<NP>` becomes a [`PhysicalNumberedParagraph`] with its `<NO.P>`
-/// as the number and its `<TXT>` / nested `<P><LIST>` as alineas.  Runs of `<P>`
-/// and `<LIST>` between `<NP>` elements are collected into a [`PhysicalParagraph`].
+/// as the number and its `<TXT>` / nested `<P><LIST>` as alineas.  Runs of `<P>`,
+/// `<LIST>`, `<TBL>`, and `<GR.TBL>` between `<NP>` elements are collected into a
+/// [`PhysicalParagraph`].
 fn parse_annex_paragraphs(node: Node) -> Vec<AnnexParagraph> {
     let mut result: Vec<AnnexParagraph> = Vec::new();
     let mut pending_alineas: Vec<Subparagraph> = Vec::new();
