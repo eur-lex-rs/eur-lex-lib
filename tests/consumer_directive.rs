@@ -5,8 +5,8 @@
 /// chapter sub-sections and inline CONS.ANNEX elements — is parsed correctly.
 use std::path::Path;
 
-use eur_lex_loader::loader::load_act;
-use eur_lex_loader::model::{Act, AnnexContent, ChapterContents, Subparagraph};
+use eur_lex_lib::loader::load_act;
+use eur_lex_lib::model::{Act, AnnexContent, ChapterContents, Subparagraph};
 
 #[test]
 fn consumer_directive_structure() {

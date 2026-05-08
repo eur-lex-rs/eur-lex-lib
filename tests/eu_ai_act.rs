@@ -4,8 +4,8 @@
 /// and act as a regression guard against parser changes.
 use std::path::Path;
 
-use eur_lex_loader::loader::load_act;
-use eur_lex_loader::model::{Act, AnnexContent, ChapterContents, CitedActType, Citation, Item, ItemContent, OfficialJournal, OjRef, Subparagraph};
+use eur_lex_lib::loader::load_act;
+use eur_lex_lib::model::{Act, AnnexContent, ChapterContents, CitedActType, Citation, Item, ItemContent, OfficialJournal, OjRef, Subparagraph};
 
 #[test]
 fn eu_ai_act_structure() {

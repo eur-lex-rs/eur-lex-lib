@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use clap::Parser;
-use eur_lex_loader::loader::load_act;
+use eur_lex_lib::loader::load_act;
 
 /// Fetch a Formex XML publication from EUR-Lex Cellar by CELEX number,
 /// extract it to a local directory, and print the act title for verification.

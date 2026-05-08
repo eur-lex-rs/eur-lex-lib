@@ -14,7 +14,7 @@
 //!
 //! ```no_run
 //! use std::path::Path;
-//! use eur_lex_loader::{load_act, Act};
+//! use eur_lex_lib::{load_act, Act};
 //!
 //! let act = load_act(Path::new("/path/to/formex/dir")).unwrap();
 //!
@@ -36,7 +36,7 @@
 //! }
 //! ```
 //!
-//! The companion binary (`eur-lex-loader`) wraps this function and adds a
+//! The companion binary (`eur_lex_loader`) wraps this function and adds a
 //! `--celex` flag to fetch a publication directly from the EUR-Lex Cellar API.
 //!
 //! # Data flow

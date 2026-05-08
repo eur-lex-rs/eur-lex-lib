@@ -1,8 +1,8 @@
 use std::path::PathBuf;
 
 use clap::Parser;
-use eur_lex_loader::loader::load_act;
-use eur_lex_loader::model::Act;
+use eur_lex_lib::loader::load_act;
+use eur_lex_lib::model::Act;
 
 /// Load a Formex act and output it as JSON.
 ///
@@ -46,7 +46,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     match cli.output {
         Some(ref path) => std::fs::write(path, &json).map_err(|e| {
-            eur_lex_loader::error::Error::Io { path: path.display().to_string(), source: e }
+            eur_lex_lib::error::Error::Io { path: path.display().to_string(), source: e }
         })?,
         None => println!("{json}"),
     }
