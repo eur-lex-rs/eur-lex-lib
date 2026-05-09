@@ -1,4 +1,5 @@
 [![codecov](https://codecov.io/github/eur-lex-rs/eur-lex-lib/graph/badge.svg?token=6TH7gBGvLu)](https://codecov.io/github/eur-lex-rs/eur-lex-lib)
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Feur-lex-rs%2Feur-lex-lib.svg?type=shield&issueType=license)](https://app.fossa.com/projects/git%2Bgithub.com%2Feur-lex-rs%2Feur-lex-lib?ref=badge_shield&issueType=license)
 
 # eur-lex-lib
 
