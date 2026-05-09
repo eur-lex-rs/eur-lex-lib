@@ -466,3 +466,7 @@ directory. All six fixtures are included in the repository.
 - Formex elements not covered by the model (e.g. images, mathematical formulae)
   are silently reduced to their plain-text content where possible; structure is
   lost.
+
+
+## License
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Feur-lex-rs%2Feur-lex-lib.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Feur-lex-rs%2Feur-lex-lib?ref=badge_large)
