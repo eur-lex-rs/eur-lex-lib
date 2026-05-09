@@ -135,7 +135,7 @@ fn trademark_act_structure() {
                 &lb.items[0],
                 Item {
                     number: 1,
-                    content: ItemContent::Text(_)
+                    content: ItemContent::Plain(_)
                 }
             ));
         }

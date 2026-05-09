@@ -46,19 +46,34 @@ pub(crate) fn child<'a>(node: Node<'a, 'a>, tag: &'static str) -> Result<Node<'a
 /// Returns the [`ListType`] encoded in a `<LIST TYPE="...">` attribute, or `None`.
 pub(crate) fn list_type_from(node: Node) -> Option<ListType> {
     match node.attribute("TYPE")? {
+        "ALPHA" => Some(ListType::AlphaUpper),
         "alpha" => Some(ListType::Alpha),
+        "ARAB"  => Some(ListType::Arab),
+        "BULLET" => Some(ListType::Bullet),
+        "DASH"  => Some(ListType::Dash),
+        "NDASH" => Some(ListType::Ndash),
+        "NONE"  => Some(ListType::NoPrefix),
+        "OTHER" => Some(ListType::Other),
+        "ROMAN" => Some(ListType::RomanUpper),
         "roman" => Some(ListType::Roman),
-        "ARAB" => Some(ListType::Arab),
-        "DASH" => Some(ListType::Dash),
         _ => None,
     }
 }
 
 /// Converts a `<LIST>` element into a vec of [`Item`]s.
 ///
-/// Each `<ITEM>` becomes an [`Item`] with a 1-based position. Simple items
-/// produce [`ItemContent::Text`]; items with a nested `<LIST>` produce
-/// [`ItemContent::List`].
+/// Each `<ITEM>` becomes an [`Item`] with a 1-based position. Two `<ITEM>`
+/// structures are supported:
+///
+/// - **NP-type** (`ALPHA`, `alpha`, `ARAB`, `NDASH`, `ROMAN`, `roman`):
+///   `<ITEM><NP><NO.P>…</NO.P><TXT>…</TXT></NP></ITEM>` — text from `<TXT>`,
+///   nested list from `<P><LIST>` inside `<NP>`.
+/// - **P-type** (`BULLET`, `DASH`, `NONE`, `OTHER`):
+///   `<ITEM><NO.P>…</NO.P><P>…</P></ITEM>` — text from `<P>` children,
+///   nested list from `<P><LIST>` inside the item.
+///
+/// Simple items produce [`ItemContent::Plain`]; items with a nested `<LIST>`
+/// produce [`ItemContent::List`].
 pub(crate) fn parse_items(node: Node) -> Vec<Item> {
     node.children()
         .filter(|n| n.is_element() && n.tag_name().name() == "ITEM")
@@ -69,6 +84,7 @@ pub(crate) fn parse_items(node: Node) -> Vec<Item> {
                 .children()
                 .find(|n| n.is_element() && n.tag_name().name() == "NP")
             {
+                // NP-type: text in <TXT>, nested list in <P><LIST> inside <NP>.
                 let text = np
                     .children()
                     .find(|n| n.is_element() && n.tag_name().name() == "TXT")
@@ -85,7 +101,7 @@ pub(crate) fn parse_items(node: Node) -> Vec<Item> {
                 if nested_lists.is_empty() {
                     Item {
                         number,
-                        content: ItemContent::Text(text),
+                        content: ItemContent::Plain(text),
                     }
                 } else {
                     let list_type = nested_lists.first().and_then(|n| list_type_from(*n));
@@ -100,15 +116,43 @@ pub(crate) fn parse_items(node: Node) -> Vec<Item> {
                     }
                 }
             } else {
-                let text = item
+                // P-type: text in plain <P> children, nested list in <P><LIST>.
+                let p_nodes: Vec<Node> = item
                     .children()
                     .filter(|n| n.is_element() && n.tag_name().name() == "P")
-                    .map(extract_text)
+                    .collect();
+                let nested_lists: Vec<Node> = p_nodes
+                    .iter()
+                    .flat_map(|p| {
+                        p.children()
+                            .filter(|n| n.is_element() && n.tag_name().name() == "LIST")
+                    })
+                    .collect();
+                let text = p_nodes
+                    .iter()
+                    .filter(|p| {
+                        !p.children()
+                            .any(|n| n.is_element() && n.tag_name().name() == "LIST")
+                    })
+                    .map(|p| extract_text(*p))
                     .collect::<Vec<_>>()
                     .join(" ");
-                Item {
-                    number,
-                    content: ItemContent::Text(text),
+                if nested_lists.is_empty() {
+                    Item {
+                        number,
+                        content: ItemContent::Plain(text),
+                    }
+                } else {
+                    let list_type = nested_lists.first().and_then(|n| list_type_from(*n));
+                    let items = nested_lists.into_iter().flat_map(parse_items).collect();
+                    Item {
+                        number,
+                        content: ItemContent::List(ListBlock {
+                            list_type,
+                            intro: text,
+                            items,
+                        }),
+                    }
                 }
             }
         })

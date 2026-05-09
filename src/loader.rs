@@ -117,7 +117,7 @@ fn extract_definitions(enacting_terms: &crate::model::EnactingTerms) -> HashMap<
 /// produced by Formex `<QUOT.START>` / `<QUOT.END>` markers.
 fn collect_definition_items(item: &Item, map: &mut HashMap<String, String>) {
     match &item.content {
-        ItemContent::Text(text) => {
+        ItemContent::Plain(text) => {
             if let Some(term) = extract_term(text) {
                 map.insert(term.to_owned(), text.clone());
             }

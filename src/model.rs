@@ -430,18 +430,33 @@ pub struct Table {
     pub row_count: usize,
 }
 
-/// The numbering style of a [`ListBlock`].
+/// The numbering style of a [`ListBlock`], corresponding to the `TYPE` attribute of `<LIST>`.
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum ListType {
-    /// Alphabetic items: (a), (b), (c)…
+    /// `ALPHA` — upper-case letters: A, B, C…
+    #[serde(rename = "ALPHA")]
+    AlphaUpper,
+    /// `alpha` — lower-case letters: a, b, c…
     Alpha,
-    /// Roman numeral items: (i), (ii), (iii)…
-    Roman,
-    /// Arabic numeral items: (1), (2), (3)…
+    /// `ARAB` — Arabic numerals: 1, 2, 3…
     Arab,
-    /// Dash items: —
+    /// `BULLET` — bullet point.
+    Bullet,
+    /// `DASH` — em-dash (U+2014).
     Dash,
+    /// `NDASH` — en-dash (U+2013); used instead of `Dash` in most language versions.
+    Ndash,
+    /// `NONE` — no prefix.
+    #[serde(rename = "none")]
+    NoPrefix,
+    /// `OTHER` — other format, e.g. `4.b.`
+    Other,
+    /// `ROMAN` — upper-case Roman numerals: I, II, III…
+    #[serde(rename = "ROMAN")]
+    RomanUpper,
+    /// `roman` — lower-case Roman numerals: i, ii, iii…
+    Roman,
 }
 
 /// A single `<ITEM>` within a [`ListBlock`].
@@ -460,7 +475,7 @@ pub struct Item {
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub enum ItemContent {
     /// A plain text item (no nested list).
-    Text(String),
+    Plain(String),
     /// An item whose body is itself a list, with optional intro text.
     List(ListBlock),
 }

@@ -116,14 +116,14 @@ fn dsma_structure() {
                 &lb.items[0],
                 Item {
                     number: 1,
-                    content: ItemContent::Text(_)
+                    content: ItemContent::Plain(_)
                 }
             ));
             assert!(matches!(
                 &lb.items[1],
                 Item {
                     number: 2,
-                    content: ItemContent::Text(_)
+                    content: ItemContent::Plain(_)
                 }
             ));
         }

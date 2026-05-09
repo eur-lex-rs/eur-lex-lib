@@ -675,7 +675,7 @@ mod tests {
                     &lb.items[0],
                     Item {
                         number: 1,
-                        content: ItemContent::Text(_)
+                        content: ItemContent::Plain(_)
                     }
                 ));
                 match &lb.items[1] {
@@ -689,14 +689,14 @@ mod tests {
                             &inner.items[0],
                             Item {
                                 number: 1,
-                                content: ItemContent::Text(_)
+                                content: ItemContent::Plain(_)
                             }
                         ));
                         assert!(matches!(
                             &inner.items[1],
                             Item {
                                 number: 2,
-                                content: ItemContent::Text(_)
+                                content: ItemContent::Plain(_)
                             }
                         ));
                     }
@@ -737,10 +737,10 @@ mod tests {
                 assert_eq!(lb.intro, "For the purposes of this Regulation:");
                 assert_eq!(lb.items.len(), 2);
                 assert!(
-                    matches!(&lb.items[0], Item { number: 1, content: ItemContent::Text(t) } if t == "first definition")
+                    matches!(&lb.items[0], Item { number: 1, content: ItemContent::Plain(t) } if t == "first definition")
                 );
                 assert!(
-                    matches!(&lb.items[1], Item { number: 2, content: ItemContent::Text(t) } if t == "second definition")
+                    matches!(&lb.items[1], Item { number: 2, content: ItemContent::Plain(t) } if t == "second definition")
                 );
             }
             _ => panic!("expected List at alineas[0].content[0]"),

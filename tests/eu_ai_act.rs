@@ -79,7 +79,7 @@ fn eu_ai_act_structure() {
                     &lb.items[0],
                     Item {
                         number: 1,
-                        content: ItemContent::Text(_)
+                        content: ItemContent::Plain(_)
                     }
                 ),
                 "first item should be at position 1"
@@ -121,7 +121,7 @@ fn eu_ai_act_structure() {
                 &lb.items[0],
                 Item {
                     number: 1,
-                    content: ItemContent::Text(_)
+                    content: ItemContent::Plain(_)
                 }
             ));
             // Item (c) has 2 sub-items.
@@ -198,7 +198,7 @@ fn eu_ai_act_structure() {
         matches!(
             &iii_list.items[1],
             Item {
-                content: ItemContent::Text(_),
+                content: ItemContent::Plain(_),
                 ..
             }
         ),
@@ -228,7 +228,7 @@ fn eu_ai_act_structure() {
     let empty_items: Vec<_> = iv_list
         .items
         .iter()
-        .filter(|item| matches!(item, Item { content: ItemContent::Text(t), .. } if t.is_empty()))
+        .filter(|item| matches!(item, Item { content: ItemContent::Plain(t), .. } if t.is_empty()))
         .collect();
     assert!(
         empty_items.is_empty(),
