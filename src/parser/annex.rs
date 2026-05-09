@@ -372,6 +372,8 @@ mod tests {
     #[test]
     /// Two `<GR.SEQ>` elements produce two `AnnexSection`s with the correct titles
     /// and one text alinea each.
+    /// Matches the structure of all three annexes of the EU Trade Mark Regulation
+    /// (32017R1001) and Annex I of the Consumer Rights Directive (32011L0083).
     fn gr_seq_produces_annex_sections() {
         let xml = r#"<GR.SEQ>
             <TITLE><TI><P>Part A</P></TI></TITLE>
@@ -394,6 +396,7 @@ mod tests {
     #[test]
     /// A `<GR.SEQ>` containing a `<P>` intro and a `<LIST>` collapses into a single
     /// `Subparagraph::List` with the intro text and two items.
+    /// Matches section structures in Annex I of the EU Trade Mark Regulation (32017R1001).
     fn gr_seq_with_list_inside() {
         let xml = r#"<GR.SEQ>
             <TITLE><TI><P>Section I</P></TI></TITLE>
@@ -419,6 +422,7 @@ mod tests {
 
     #[test]
     /// A bare `<P>` with no surrounding `<NP>` becomes a `Subparagraph::Plain` item.
+    /// Matches preamble text or plain-text annexes with no numbered paragraphs.
     fn plain_paragraphs_become_anonymous_paragraph() {
         let paras = parse_paragraphs("<P>Some text.</P>");
         assert_eq!(paras.len(), 1);
@@ -435,6 +439,8 @@ mod tests {
     #[test]
     /// A single `<NP>` with `<NO.P>` and `<TXT>` becomes a `Subparagraph::Numbered`
     /// with one `Plain` alinea.
+    /// Matches numbered-paragraph annexes such as those of the Anti-Dumping Regulation
+    /// (32016R1036) and the REACH Regulation (32006R1907).
     fn np_becomes_numbered_paragraph() {
         let paras = parse_paragraphs("<NP><NO.P>1.</NO.P><TXT>First item.</TXT></NP>");
         assert_eq!(paras.len(), 1);
@@ -446,6 +452,8 @@ mod tests {
 
     #[test]
     /// Two consecutive `<NP>` elements each become a separate `Subparagraph::Numbered`.
+    /// Matches the flat-NP structure common in REACH Regulation (32006R1907) annexes
+    /// and Anti-Dumping Regulation (32016R1036) annexes.
     fn multiple_nps_become_separate_paragraphs() {
         let xml = r#"<NP><NO.P>1.</NO.P><TXT>First.</TXT></NP>
                      <NP><NO.P>2.</NO.P><TXT>Second.</TXT></NP>"#;
@@ -460,6 +468,9 @@ mod tests {
     #[test]
     /// An `<NP>` whose `<TXT>` is followed by a `<P><LIST>` produces a single
     /// `Subparagraph::List` alinea with the `<TXT>` as intro and the list items.
+    /// Matches Annex III of the EU AI Act (32024R1689), where each high-risk category
+    /// (e.g. biometric identification systems) is an NP whose body is a nested list
+    /// of sub-categories.
     fn np_with_nested_list_becomes_list_alinea() {
         let xml = r#"<NP>
             <NO.P>1.</NO.P>
@@ -486,6 +497,10 @@ mod tests {
     #[test]
     /// A `<P>` immediately followed by a sibling `<LIST>` has its text promoted to
     /// the `intro` of the resulting `Subparagraph::List`; both collapse into one item.
+    /// The `TYPE="DASH"` list uses P-type items (`<ITEM><NO.P>—</NO.P><P>…</P></ITEM>`);
+    /// the same intro-promotion logic applies for `NONE`-type lists.
+    /// Seen in REACH Regulation (32006R1907) annexes and the Anti-Dumping Regulation
+    /// (32016R1036).
     fn p_before_list_becomes_intro() {
         let xml = r#"<P>Items:</P>
                      <LIST TYPE="DASH">
@@ -506,6 +521,8 @@ mod tests {
     #[test]
     /// A `<P>` that directly wraps a `<LIST>` (no plain text siblings) produces a
     /// `Subparagraph::List` directly with an empty intro.
+    /// Matches Annex III of the EU AI Act (32024R1689), where the high-risk category
+    /// list is wrapped in a `<P>` inside the annex `<CONTENTS>`.
     fn p_wrapping_list_becomes_list_block() {
         let xml = r#"<P><LIST TYPE="ARAB">
             <ITEM><NP><NO.P>1.</NO.P><TXT>First.</TXT></NP></ITEM>
@@ -524,6 +541,8 @@ mod tests {
     #[test]
     /// A plain `<P>` before the first `<NP>` becomes a `Plain` item; each `<NP>`
     /// becomes a separate `Numbered` item — three flat items in total.
+    /// Matches annex structures where a preamble sentence precedes numbered paragraphs,
+    /// as seen in some REACH Regulation (32006R1907) and Anti-Dumping (32016R1036) annexes.
     fn mixed_p_and_np_groups_correctly() {
         let xml = r#"<P>Preamble text.</P>
                      <NP><NO.P>1.</NO.P><TXT>Item one.</TXT></NP>

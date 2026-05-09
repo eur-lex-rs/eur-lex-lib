@@ -62,15 +62,19 @@ pub(crate) fn list_type_from(node: Node) -> Option<ListType> {
 
 /// Converts a `<LIST>` element into a vec of [`Item`]s.
 ///
-/// Each `<ITEM>` becomes an [`Item`] with a 1-based position. Two `<ITEM>`
-/// structures are supported:
+/// Each `<ITEM>` becomes an [`Item`] with a 1-based position. The branch is
+/// detected **structurally** — by checking whether the `<ITEM>` has an `<NP>`
+/// child — not from the list's `TYPE` attribute:
 ///
-/// - **NP-type** (`ALPHA`, `alpha`, `ARAB`, `NDASH`, `ROMAN`, `roman`):
-///   `<ITEM><NP><NO.P>…</NO.P><TXT>…</TXT></NP></ITEM>` — text from `<TXT>`,
-///   nested list from `<P><LIST>` inside `<NP>`.
-/// - **P-type** (`BULLET`, `DASH`, `NONE`, `OTHER`):
-///   `<ITEM><NO.P>…</NO.P><P>…</P></ITEM>` — text from `<P>` children,
-///   nested list from `<P><LIST>` inside the item.
+/// - **NP-type** — `<ITEM>` contains `<NP><NO.P>…</NO.P><TXT>…</TXT></NP>`:
+///   text from `<TXT>`, nested list from `<P><LIST>` inside `<NP>`.
+///   Observed with `TYPE` values: `ALPHA`, `alpha`, `ARAB`, `NDASH`, `ROMAN`,
+///   `roman`, and also `OTHER` (e.g. REACH Regulation 32006R1907 uses
+///   `OTHER` with NP-type items labelled `T1.`, `T2.`, …).
+/// - **P-type** — `<ITEM>` has no `<NP>` child; text comes from direct `<P>`
+///   children, nested list from `<P><LIST>` inside the item.
+///   Observed with `TYPE` values: `DASH`, `NONE`.
+///   `BULLET` has no occurrences in the current data set.
 ///
 /// Simple items produce [`ItemContent::Plain`]; items with a nested `<LIST>`
 /// produce [`ItemContent::List`].
@@ -233,15 +237,15 @@ pub(crate) fn parse_table(gr_tbl: Node) -> Vec<Subparagraph> {
 ///
 /// | XML element | Output |
 /// |---|---|
-/// | `<P>` (plain) | pending intro; flushed as `Text` if not followed by `<LIST>` |
+/// | `<P>` (plain) | pending intro; flushed as `Plain` if not followed by `<LIST>` |
 /// | `<P>` immediately before sibling `<LIST>` | grouped into `List` with intro |
 /// | `<P>` wrapping `<LIST>` or `<TBL>` children | those blocks expanded directly |
 /// | `<LIST>` | `List` via [`parse_items`] |
 /// | `<GR.TBL>` | one `Table` per `<TBL>` child |
 /// | `<TBL>` | `Table` via [`parse_single_tbl`] |
-/// | `<NP>` | `Text(TXT)` |
+/// | `<NP>` | `Plain(TXT)` |
 /// | `<TITLE>` | skipped (structural, extracted by callers) |
-/// | other | text content as `Text` |
+/// | other | text content as `Plain` |
 pub(crate) fn parse_block_children(node: Node) -> Vec<Subparagraph> {
     let mut result: Vec<Subparagraph> = Vec::new();
     let mut pending: Option<String> = None;
@@ -341,4 +345,131 @@ pub(crate) fn parse_block_children(node: Node) -> Vec<Subparagraph> {
         }
     }
     result
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn parse_list(xml: &str) -> Vec<Item> {
+        let doc = roxmltree::Document::parse(xml).unwrap();
+        parse_items(doc.root_element())
+    }
+
+    // ── parse_items: NP-type ──────────────────────────────────────────────────
+    //
+    // NP-type lists (TYPE="ARAB", "ALPHA", "alpha", "ROMAN", "roman", "NDASH")
+    // wrap each item in <NP>:
+    //
+    //   <LIST TYPE="ARAB">
+    //     <ITEM><NP><NO.P>1.</NO.P><TXT>text</TXT></NP></ITEM>
+    //   </LIST>
+    //
+    // Seen in: Article 3 (definitions) of the EU AI Act (32024R1689),
+    //          Article 3 of the DSA (32022R2065).
+
+    #[test]
+    /// Two ARAB-type items produce two `ItemContent::Plain` items with correct text.
+    fn np_type_plain_items() {
+        let items = parse_list(
+            r#"<LIST TYPE="ARAB">
+                <ITEM><NP><NO.P>1.</NO.P><TXT>First item.</TXT></NP></ITEM>
+                <ITEM><NP><NO.P>2.</NO.P><TXT>Second item.</TXT></NP></ITEM>
+            </LIST>"#,
+        );
+        assert_eq!(items.len(), 2);
+        assert!(matches!(&items[0], Item { number: 1, content: ItemContent::Plain(t) } if t == "First item."));
+        assert!(matches!(&items[1], Item { number: 2, content: ItemContent::Plain(t) } if t == "Second item."));
+    }
+
+    #[test]
+    /// An NP-type item whose <NP> contains a <P><LIST> produces `ItemContent::List`,
+    /// with the <TXT> as intro and the nested items inside.
+    /// Matches Article 5, items (c) and (h) of the EU AI Act (32024R1689).
+    fn np_type_item_with_nested_list() {
+        let items = parse_list(
+            r#"<LIST TYPE="alpha">
+                <ITEM><NP>
+                    <NO.P>(a)</NO.P>
+                    <TXT>Introductory sentence:</TXT>
+                    <P><LIST TYPE="roman">
+                        <ITEM><NP><NO.P>(i)</NO.P><TXT>Sub-item one.</TXT></NP></ITEM>
+                        <ITEM><NP><NO.P>(ii)</NO.P><TXT>Sub-item two.</TXT></NP></ITEM>
+                    </LIST></P>
+                </NP></ITEM>
+            </LIST>"#,
+        );
+        assert_eq!(items.len(), 1);
+        match &items[0] {
+            Item { number: 1, content: ItemContent::List(lb) } => {
+                assert_eq!(lb.intro, "Introductory sentence:");
+                assert_eq!(lb.items.len(), 2);
+                assert!(matches!(&lb.items[0], Item { number: 1, content: ItemContent::Plain(t) } if t == "Sub-item one."));
+            }
+            _ => panic!("expected ItemContent::List"),
+        }
+    }
+
+    // ── parse_items: P-type ───────────────────────────────────────────────────
+    //
+    // P-type lists (TYPE="BULLET", "DASH", "NONE", "OTHER") place text
+    // directly in <P> children of the <ITEM> (no <NP> wrapper):
+    //
+    //   <LIST TYPE="DASH">
+    //     <ITEM><NO.P>—</NO.P><P>text</P></ITEM>
+    //   </LIST>
+    //
+    // Seen in: Annexes of the EU Trade Mark Regulation (32017R1001),
+    //          various annexes of the Anti-Dumping Regulation (32016R1036).
+
+    #[test]
+    /// Two DASH-type items produce two `ItemContent::Plain` items from their <P> children.
+    fn p_type_plain_items() {
+        let items = parse_list(
+            r#"<LIST TYPE="DASH">
+                <ITEM><NO.P>—</NO.P><P>First dash item.</P></ITEM>
+                <ITEM><NO.P>—</NO.P><P>Second dash item.</P></ITEM>
+            </LIST>"#,
+        );
+        assert_eq!(items.len(), 2);
+        assert!(matches!(&items[0], Item { number: 1, content: ItemContent::Plain(t) } if t == "First dash item."));
+        assert!(matches!(&items[1], Item { number: 2, content: ItemContent::Plain(t) } if t == "Second dash item."));
+    }
+
+    #[test]
+    /// Multiple <P> children in a P-type item are joined with a space.
+    fn p_type_multiple_p_children_joined() {
+        let items = parse_list(
+            r#"<LIST TYPE="BULLET">
+                <ITEM><P>First sentence.</P><P>Second sentence.</P></ITEM>
+            </LIST>"#,
+        );
+        assert_eq!(items.len(), 1);
+        assert!(matches!(&items[0], Item { number: 1, content: ItemContent::Plain(t) } if t == "First sentence. Second sentence."));
+    }
+
+    #[test]
+    /// A P-type item whose last <P> wraps a <LIST> produces `ItemContent::List`;
+    /// preceding <P> text becomes the intro.
+    fn p_type_item_with_nested_list() {
+        let items = parse_list(
+            r#"<LIST TYPE="NONE">
+                <ITEM>
+                    <P>Intro text:</P>
+                    <P><LIST TYPE="ARAB">
+                        <ITEM><NP><NO.P>1.</NO.P><TXT>Sub-item one.</TXT></NP></ITEM>
+                        <ITEM><NP><NO.P>2.</NO.P><TXT>Sub-item two.</TXT></NP></ITEM>
+                    </LIST></P>
+                </ITEM>
+            </LIST>"#,
+        );
+        assert_eq!(items.len(), 1);
+        match &items[0] {
+            Item { number: 1, content: ItemContent::List(lb) } => {
+                assert_eq!(lb.intro, "Intro text:");
+                assert_eq!(lb.items.len(), 2);
+            }
+            _ => panic!("expected ItemContent::List"),
+        }
+    }
 }

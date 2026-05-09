@@ -1,3 +1,19 @@
+//! Citation extraction from Formex XML nodes.
+//!
+//! EU legislative acts cite other acts in two ways:
+//! - **NOTE footnotes** — `<NOTE>` elements containing a full citation string
+//!   (e.g. `Regulation (EU) 2022/2065 … OJ L 277 …`), often with a
+//!   `<REF.DOC.OJ>` child that carries the Official Journal reference.
+//! - **Inline mentions** — citation strings embedded directly in paragraph text,
+//!   without a dedicated footnote (e.g. `… subject to Regulation (EU) 2016/679 …`).
+//!
+//! [`extract_citations`] applies both patterns and deduplicates the results,
+//! preferring NOTE-backed citations (which carry OJ refs) over inline-only ones.
+//!
+//! Two regex patterns cover the main citation styles found in EUR-Lex Formex:
+//! - **Prefix-regime**: `Regulation (EU) 2022/2065`, `Directive (EC) No 207/2009`
+//! - **Suffix-regime**: `Directive 2008/95/EC`, `Directive 89/104/EEC`
+
 use std::collections::HashSet;
 use std::sync::LazyLock;
 
