@@ -28,7 +28,7 @@ Arguments:
 
 Options:
   -c, --celex <CELEX>    Fetch from EUR-Lex Cellar by CELEX number (e.g. 32024R1689)
-  -f, --format <FORMAT>  Output format [default: md] [possible values: md, txt]
+  -f, --format <FORMAT>  Output format [default: md] [possible values: md, txt, html]
   -h, --help             Print help
   -V, --version          Print version
 ```
@@ -70,6 +70,23 @@ Produces plain text with no markup syntax — no `#`, `**`, `>`, or `|`
 characters. Tables are column-aligned; major section separators use lines of
 U+2500 (`─`) characters. Suitable for terminal output, text-only pipelines, or
 tools that do not understand Markdown.
+
+---
+
+### HTML output
+
+```bash
+# Render as a self-contained HTML document
+eur_lex_print --format html data/32024R1689 > ai_act.html
+
+# Fetch and open in a browser (macOS)
+eur_lex_print --format html --celex 32022R2065 > dsa.html && open dsa.html
+```
+
+Produces a self-contained HTML5 document with semantic elements (`<h2>`
+chapters, `<h3>` sections, `<h4>` articles, `<blockquote>` for visas, `<ol>`/
+`<ul>` for lists, `<table>` with `<thead>`/`<tbody>` for tables) and minimal
+inline CSS for readability. All text content is HTML-escaped.
 
 ---
 

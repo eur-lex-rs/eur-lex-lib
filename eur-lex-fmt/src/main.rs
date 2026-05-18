@@ -30,6 +30,8 @@ enum Format {
     Md,
     /// Plain text.
     Txt,
+    /// Self-contained HTML5 document.
+    Html,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -44,6 +46,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let output = match cli.format {
         Format::Md => eur_lex_lib::fmt::markdown::render_act(&act),
         Format::Txt => eur_lex_lib::fmt::txt::render_act(&act),
+        Format::Html => eur_lex_lib::fmt::html::render_act(&act),
     };
     print!("{output}");
     Ok(())

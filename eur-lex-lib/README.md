@@ -66,6 +66,9 @@ let md = eur_lex_lib::fmt::markdown::render_act(&act);
 
 // Plain text (no markup syntax)
 let txt = eur_lex_lib::fmt::txt::render_act(&act);
+
+// Self-contained HTML5 document
+let html = eur_lex_lib::fmt::html::render_act(&act);
 ```
 
 The [`eur-lex-fmt`](../eur-lex-fmt/) crate provides `eur_lex_print`, a CLI
