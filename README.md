@@ -1,5 +1,4 @@
-[![codecov](https://codecov.io/github/eur-lex-rs/eur-lex-lib/graph/badge.svg?token=6TH7gBGvLu)](https://codecov.io/github/eur-lex-rs/eur-lex-lib)
-[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Feur-lex-rs%2Feur-lex-lib.svg?type=shield&issueType=license)](https://app.fossa.com/projects/git%2Bgithub.com%2Feur-lex-rs%2Feur-lex-lib?ref=badge_shield&issueType=license)
+[![codecov](https://codecov.io/github/eur-lex-rs/eur-lex/graph/badge.svg?token=6TH7gBGvLu)](https://codecov.io/github/eur-lex-rs/eur-lex)
 
 # eur-lex-rs
 
@@ -149,6 +148,3 @@ Test fixtures are in the `data/` directory at the workspace root.
   are silently reduced to their plain-text content where possible; structure is
   lost.
 
-
-## License
-[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Feur-lex-rs%2Feur-lex-lib.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Feur-lex-rs%2Feur-lex-lib?ref=badge_large)
