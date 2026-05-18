@@ -1,11 +1,10 @@
 use std::path::PathBuf;
 
-use clap::Parser;
-use eur_lex_lib::fmt::markdown::render_act;
+use clap::{Parser, ValueEnum};
 use eur_lex_lib::loader::load_act;
 use eur_lex_lib::model::Act;
 
-/// Print a Formex act as Markdown.
+/// Print a Formex act in the chosen format.
 ///
 /// Pass a local directory path, or use `--celex` to fetch directly from the
 /// EUR-Lex Cellar repository. The directory must contain a `*.doc.fmx.xml`
@@ -19,6 +18,18 @@ struct Cli {
     /// Fetch an act from EUR-Lex Cellar by CELEX number (e.g. 32022R2065).
     #[arg(short, long, conflicts_with = "dir")]
     celex: Option<String>,
+
+    /// Output format.
+    #[arg(short, long, default_value = "md")]
+    format: Format,
+}
+
+#[derive(Clone, ValueEnum)]
+enum Format {
+    /// Markdown (GitHub-flavoured).
+    Md,
+    /// Plain text.
+    Txt,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -30,7 +41,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         (None, None) => unreachable!("clap enforces arg_required_else_help"),
     };
 
-    print!("{}", render_act(&act));
+    let output = match cli.format {
+        Format::Md => eur_lex_lib::fmt::markdown::render_act(&act),
+        Format::Txt => eur_lex_lib::fmt::txt::render_act(&act),
+    };
+    print!("{output}");
     Ok(())
 }
 
