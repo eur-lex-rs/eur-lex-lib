@@ -12,6 +12,9 @@ license-file = "../LICENSE"
 name = "eur_lex_lib"
 path = "src/lib.rs"
 
+[features]
+fmt = []
+
 [dependencies]
 roxmltree = "0.20"
 serde = { version = "1", features = ["derive"] }

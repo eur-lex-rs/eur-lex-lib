@@ -55,6 +55,10 @@
 //!    [`std::collections::HashMap`].
 //! 6. Assemble everything into an [`Act::Regular`] or [`Act::Consolidated`].
 
+/// Output formatters, enabled via the `fmt` feature.
+#[cfg(feature = "fmt")]
+pub mod fmt;
+
 /// Error types for loading and parsing Formex acts.
 pub mod error;
 /// File discovery and top-level assembly of an [`Act`].
