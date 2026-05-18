@@ -6,7 +6,6 @@ author = ["Romain VINCENT <romain+eurolexrs@rvincent.eu>"]
 description = "A Rust library and command-line tool for parsing EU regulations published in Formex 4 XML format and converting them to JSON"
 readme = "README.md"
 repository = "https://github.com/eur-lex-rs/eur-lex-lib"
-license = "AGPL-3.0-or-later"
 license-file = "LICENSE"
 
 [lib]
