@@ -1,0 +1,19 @@
+[package]
+name = "eur-lex-fmt"
+version = "0.1.0"
+edition = "2024"
+authors = ["Romain VINCENT <romain+eurolexrs@rvincent.eu>"]
+description = "CLI tools for formatting EUR-Lex acts into human-readable output"
+repository = "https://github.com/eur-lex-rs/eur-lex-lib"
+license-file = "../LICENSE"
+
+[[bin]]
+name = "eur_lex_print"
+path = "src/main.rs"
+
+[dependencies]
+eur-lex-lib = { path = "../eur-lex-lib", features = ["fmt"] }
+clap = { version = "4", features = ["derive"] }
+reqwest = { version = "0.12", features = ["blocking", "rustls-tls"], default-features = false }
+tempfile = "3"
+zip = "8"

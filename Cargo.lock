@@ -367,6 +367,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "eur-lex-fmt"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "eur-lex-lib",
+ "reqwest",
+ "tempfile",
+ "zip",
+]
+
+[[package]]
 name = "eur-lex-lib"
 version = "0.1.0"
 dependencies = [
