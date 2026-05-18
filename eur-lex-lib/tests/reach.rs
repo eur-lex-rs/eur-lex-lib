@@ -10,6 +10,9 @@ use eur_lex_lib::loader::load_act;
 use eur_lex_lib::model::{Act, AnnexContent, ChapterContents, EnactingTermsContent, Subparagraph};
 
 #[test]
+/// Validates the structural layout of the REACH Regulation (consolidated): 15 titles,
+/// 141 total articles, 18 inline annexes. Specifically verifies that ANNEX IV — which
+/// contains a bare `<TBL>` element directly inside `<CONTENTS>` — is parsed as a Table.
 fn reach_regulation_structure() {
     let loaded = load_act(Path::new("../data/32006R1907"))
         .expect("failed to load REACH regulation from data/32006R1907");

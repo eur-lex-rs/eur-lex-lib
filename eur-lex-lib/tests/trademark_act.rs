@@ -12,6 +12,9 @@ use eur_lex_lib::model::{
 };
 
 #[test]
+/// Validates the structural layout of the EU Trade Mark Regulation against known counts:
+/// 14 chapters, 212 total articles, 4 visas, 48 recitals, 3 annexes (I–III).
+/// Also verifies Article 7 paragraph list (13 items) and that annexes use GR.SEQ sections.
 fn trademark_act_structure() {
     let act = load_act(Path::new("../data/32017R1001"))
         .expect("failed to load TrademarkAct from data/32017R1001");
@@ -170,6 +173,11 @@ fn trademark_act_structure() {
 }
 
 #[test]
+/// Validates citation parsing in the EU Trade Mark Regulation preamble.
+/// Recital (1): single NOTE-backed citation to Regulation (EC) No 207/2009.
+/// Recital (2): three NOTE-backed citations plus one inline mention.
+/// Recital (16): 608/2013 appears both inline and in a NOTE; the NOTE entry (with OJ ref) wins.
+/// Recital (18): 608/2013 appears inline only — no OJ ref.
 fn trademark_act_recital_citations() {
     let act = load_act(Path::new("../data/32017R1001"))
         .expect("failed to load TrademarkAct from data/32017R1001");
@@ -291,6 +299,8 @@ fn trademark_act_recital_citations() {
 }
 
 #[test]
+/// Validates the bibliographic metadata of the EU Trade Mark Regulation:
+/// OJ reference (L 154, 2017-06-16), prod_id, fin_id, authors (PE, CS), and eea_relevant flag.
 fn trademark_act_metadata() {
     let act = load_act(Path::new("../data/32017R1001"))
         .expect("failed to load Trademark Act from data/32017R1001");

@@ -13,6 +13,9 @@ use eur_lex_lib::loader::load_act;
 use eur_lex_lib::model::{Act, ArticleContent, EnactingTermsContent, SubdivisionContent};
 
 #[test]
+/// Validates the structural layout of the Anti-Dumping Regulation (consolidated, 2018):
+/// flat `EnactingTermsContent::Articles` (28 articles — 3 more than the original),
+/// 3 inline annexes (ANNEX I, Ia, II), and Article 2 subdivisions with letter-prefixed titles.
 fn anti_dumping_consolidated_structure() {
     let loaded = load_act(Path::new("../data/02016R1036-20180608"))
         .expect("failed to load consolidated Anti-Dumping Regulation");

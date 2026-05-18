@@ -12,6 +12,7 @@ A Rust workspace for working with EU legislative acts published in
 |---|---|
 | [`eur-lex-lib`](eur-lex-lib/) | Library — parses Formex XML into typed Rust structs |
 | [`eur-lex-utils`](eur-lex-utils/) | CLI tools — fetch and convert acts from EUR-Lex |
+| [`eur-lex-fmt`](eur-lex-fmt/) | CLI tool — print acts as Markdown or plain text |
 
 The library extracts the full document structure: bibliographic metadata (CELEX
 number, document date, legal value, Official Journal reference, authors),
@@ -94,8 +95,9 @@ The CELEX number appears in every EUR-Lex URL, e.g.:
 cargo build --release
 ```
 
-Two binaries are produced under `target/release/`: `eur_lex_fetch` and
-`eur_lex_loader`. See [`eur-lex-utils/`](eur-lex-utils/) for usage.
+Three binaries are produced under `target/release/`: `eur_lex_fetch`,
+`eur_lex_loader`, and `eur_lex_print`. See [`eur-lex-utils/`](eur-lex-utils/)
+and [`eur-lex-fmt/`](eur-lex-fmt/) for usage.
 
 ---
 
@@ -105,9 +107,15 @@ Two binaries are produced under `target/release/`: `eur_lex_fetch` and
 cargo test
 ```
 
-Unit tests live alongside their source modules in `eur-lex-lib/`. Integration
-tests in `eur-lex-lib/tests/` validate the full parse of eight EU legislative
-acts against known structural counts:
+Unit tests live alongside their source modules in `eur-lex-lib/`. To include
+the formatter unit tests, run:
+
+```bash
+cargo test -p eur-lex-lib --features fmt
+```
+
+Integration tests in `eur-lex-lib/tests/` validate the full parse of eight EU
+legislative acts against known structural counts:
 
 | File | Act | Format | Articles | Recitals | Definitions | Tables |
 |---|---|---|---|---|---|---|

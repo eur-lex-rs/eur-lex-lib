@@ -11,6 +11,10 @@ use eur_lex_lib::model::{
 };
 
 #[test]
+/// Validates the structural layout of the EU AI Act against known counts: 13 chapters,
+/// 113 total articles, 7 visas, 180 recitals, 13 annexes, and 68 definitions.
+/// Also verifies deep content: Article 3 definitions list, Article 5 nested lists,
+/// Annex III list wrapped in a `<P>`, and Annex IV NP-wrapped items with no empty text.
 fn eu_ai_act_structure() {
     let act = load_act(Path::new("../data/32024R1689"))
         .expect("failed to load EU AI Act from data/32024R1689");
@@ -259,6 +263,10 @@ fn eu_ai_act_structure() {
 }
 
 #[test]
+/// Validates citation parsing in the EU AI Act preamble.
+/// Recital (10): four NOTE-backed citations (GDPR, Regulation 2018/1725, LED, ePrivacy).
+/// Recital (11): DSA cited via NOTE with full OJ reference.
+/// Recital (14): three inline-only citations with no OJ ref.
 fn eu_ai_act_recital_citations() {
     let act = load_act(Path::new("../data/32024R1689"))
         .expect("failed to load EU AI Act from data/32024R1689");
@@ -388,6 +396,8 @@ fn eu_ai_act_recital_citations() {
 }
 
 #[test]
+/// Validates the bibliographic metadata of the EU AI Act:
+/// OJ reference (L series, 2024-07-12), prod_id, fin_id, authors (none), and eea_relevant flag.
 fn eu_ai_act_metadata() {
     let act = load_act(Path::new("../data/32024R1689"))
         .expect("failed to load EU AI Act from data/32024R1689");

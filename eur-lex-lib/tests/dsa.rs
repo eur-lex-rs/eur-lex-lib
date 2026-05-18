@@ -11,6 +11,9 @@ use eur_lex_lib::model::{
 };
 
 #[test]
+/// Validates the structural layout of the Digital Services Act against known counts:
+/// 5 chapters, 93 total articles, 6 visas, 156 recitals, and deep content
+/// assertions on Article 1 (paragraphs and list items) and Article 3 (definitions list).
 fn dsa_structure() {
     let act =
         load_act(Path::new("../data/32022R2065")).expect("failed to load DSA from data/32022R2065");
@@ -194,6 +197,8 @@ fn dsa_structure() {
 }
 
 #[test]
+/// Validates the bibliographic metadata of the Digital Services Act:
+/// OJ reference (L 277, 2022-10-27), prod_id, fin_id, authors, and eea_relevant flag.
 fn dsa_metadata() {
     let act =
         load_act(Path::new("../data/32022R2065")).expect("failed to load DSA from data/32022R2065");

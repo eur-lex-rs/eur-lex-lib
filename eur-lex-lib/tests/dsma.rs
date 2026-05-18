@@ -12,6 +12,9 @@ use eur_lex_lib::model::{
 };
 
 #[test]
+/// Validates the structural layout of the Copyright in the Digital Single Market Directive
+/// against known counts: 5 titles, 32 total articles, 6 visas, 86 recitals, 6 definitions.
+/// Also verifies Article 2 definitions list and Title III/IV section breakdown.
 fn dsma_structure() {
     let act =
         load_act(Path::new("../data/32019L0790")).expect("failed to load DSMA from data/32019L0790");
@@ -174,6 +177,8 @@ fn dsma_structure() {
 }
 
 #[test]
+/// Validates the bibliographic metadata of the Copyright in the Digital Single Market Directive:
+/// OJ reference (L 130, 2019-05-17), prod_id, fin_id, authors (PE, CS), and eea_relevant flag.
 fn dsma_metadata() {
     let act =
         load_act(Path::new("../data/32019L0790")).expect("failed to load DSMA from data/32019L0790");

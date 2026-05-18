@@ -44,6 +44,35 @@ if let Act::Regular(reg) = &act {
 }
 ```
 
+## Optional features
+
+### `fmt`
+
+Enables output renderers under `eur_lex_lib::fmt`. Two formats are provided:
+
+```toml
+[dependencies]
+eur-lex-lib = { git = "https://github.com/eur-lex-rs/eur-lex-lib", features = ["fmt"] }
+```
+
+```rust
+use eur_lex_lib::load_act;
+use std::path::Path;
+
+let act = load_act(Path::new("data/32022R2065"))?;
+
+// GitHub-flavoured Markdown
+let md = eur_lex_lib::fmt::markdown::render_act(&act);
+
+// Plain text (no markup syntax)
+let txt = eur_lex_lib::fmt::txt::render_act(&act);
+```
+
+The [`eur-lex-fmt`](../eur-lex-fmt/) crate provides `eur_lex_print`, a CLI
+wrapper that exposes both formats via a `--format md|txt` flag.
+
+---
+
 ## What it parses
 
 `load_act` takes the path to a Formex publication directory — the kind produced

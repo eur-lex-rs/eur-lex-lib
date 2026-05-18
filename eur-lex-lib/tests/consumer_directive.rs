@@ -9,6 +9,10 @@ use eur_lex_lib::loader::load_act;
 use eur_lex_lib::model::{Act, AnnexContent, ChapterContents, EnactingTermsContent, Subparagraph};
 
 #[test]
+/// Validates the structural layout of the Consumer Rights Directive (consolidated):
+/// 6 chapters with direct articles (no section sub-divisions), 36 total articles,
+/// 2 inline annexes. Verifies that ANNEX II — a `<GR.TBL>` correlation table — is
+/// parsed as `AnnexContent::Paragraphs` containing a `Subparagraph::Table`.
 fn consumer_directive_structure() {
     let loaded =
         load_act(Path::new("../data/32011L0083")).expect("failed to load Consumer Rights Directive");
