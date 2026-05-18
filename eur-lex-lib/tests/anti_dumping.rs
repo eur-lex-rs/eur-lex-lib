@@ -12,7 +12,7 @@ use eur_lex_lib::model::{Act, ArticleContent, EnactingTermsContent, SubdivisionC
 
 #[test]
 fn anti_dumping_regulation_structure() {
-    let loaded = load_act(Path::new("data/32016R1036"))
+    let loaded = load_act(Path::new("../data/32016R1036"))
         .expect("failed to load Anti-Dumping Regulation from data/32016R1036");
     let Act::Regular(reg) = loaded else {
         panic!("32016R1036 should be a Regular act")

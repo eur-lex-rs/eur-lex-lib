@@ -14,7 +14,7 @@ use eur_lex_lib::model::{
 #[test]
 fn dsma_structure() {
     let act =
-        load_act(Path::new("data/32019L0790")).expect("failed to load DSMA from data/32019L0790");
+        load_act(Path::new("../data/32019L0790")).expect("failed to load DSMA from data/32019L0790");
     let Act::Regular(reg) = act else {
         panic!("DSMA should be a Regular act")
     };
@@ -176,7 +176,7 @@ fn dsma_structure() {
 #[test]
 fn dsma_metadata() {
     let act =
-        load_act(Path::new("data/32019L0790")).expect("failed to load DSMA from data/32019L0790");
+        load_act(Path::new("../data/32019L0790")).expect("failed to load DSMA from data/32019L0790");
     let Act::Regular(reg) = act else {
         panic!("DSMA should be a Regular act")
     };

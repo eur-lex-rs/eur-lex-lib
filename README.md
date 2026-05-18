@@ -1,18 +1,17 @@
 [![codecov](https://codecov.io/github/eur-lex-rs/eur-lex-lib/graph/badge.svg?token=6TH7gBGvLu)](https://codecov.io/github/eur-lex-rs/eur-lex-lib)
 [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Feur-lex-rs%2Feur-lex-lib.svg?type=shield&issueType=license)](https://app.fossa.com/projects/git%2Bgithub.com%2Feur-lex-rs%2Feur-lex-lib?ref=badge_shield&issueType=license)
 
-# eur-lex-lib
+# eur-lex-rs
 
-A Rust crate for working with EU legislative acts published in
+A Rust workspace for working with EU legislative acts published in
 [Formex 4](https://op.europa.eu/en/web/eu-vocabularies/formex) XML format.
-It provides two command-line tools and a library:
 
-- **`eur_lex_fetch`** — downloads a Formex publication from the EUR-Lex Cellar
-  repository by CELEX number and extracts it into a local directory.
-- **`eur_lex_loader`** — parses a local Formex directory and converts the act to
-  JSON, or fetches and converts in a single step.
-- **Library** — exposes `load_act` and the full data model for embedding in Rust
-  applications. The public API is documented with `cargo doc --open`.
+## Crates
+
+| Crate | Description |
+|---|---|
+| [`eur-lex-lib`](eur-lex-lib/) | Library — parses Formex XML into typed Rust structs |
+| [`eur-lex-utils`](eur-lex-utils/) | CLI tools — fetch and convert acts from EUR-Lex |
 
 The library extracts the full document structure: bibliographic metadata (CELEX
 number, document date, legal value, Official Journal reference, authors),
@@ -20,11 +19,6 @@ title, preamble (legal bases and recitals), enacting terms (chapters, sections,
 articles, and nested lists), tables, annexes, and a flat definitions map when
 the act contains a Definitions article. Both original and consolidated acts are
 supported.
-
-Article content takes one of three forms depending on the XML structure:
-numbered paragraphs (`<PARAG>`), bare alineas (`<ALINEA>`), or titled
-subdivisions (`<SUBDIV>`) — thematic groupings that each carry their own title
-and contain paragraphs or alineas (and can nest further subdivisions).
 
 ---
 
@@ -76,7 +70,7 @@ Every EU legal act has a unique CELEX identifier. The format is:
 └─ sector: 3 = secondary legislation
 ```
 
-Examples — all six acts included as test fixtures in this repository:
+Examples — all eight acts included as test fixtures in this repository:
 
 | Act | CELEX | Format |
 |---|---|---|
@@ -84,6 +78,8 @@ Examples — all six acts included as test fixtures in this repository:
 | Digital Services Act (2022) | `32022R2065` | Original regulation |
 | EU Trade Mark Regulation (2017) | `32017R1001` | Original regulation |
 | Copyright in the Digital Single Market Directive (2019) | `32019L0790` | Original directive |
+| Anti-Dumping Regulation (2016) | `32016R1036` | Original regulation |
+| Anti-Dumping Regulation — consolidated (2018) | `02016R1036-20180608` | Consolidated regulation |
 | REACH Regulation (2006) | `32006R1907` | Consolidated regulation |
 | Consumer Rights Directive (2011) | `32011L0083` | Consolidated directive |
 
@@ -99,330 +95,7 @@ cargo build --release
 ```
 
 Two binaries are produced under `target/release/`: `eur_lex_fetch` and
-`eur_lex_loader`.
-
----
-
-## Fetching an act — `eur_lex_fetch`
-
-Downloads a Formex ZIP archive from the EUR-Lex Cellar API by CELEX number,
-extracts it into a local directory, then prints the act title to stdout so you
-can confirm the correct act was retrieved. Progress messages go to stderr.
-
-```
-eur_lex_fetch [OPTIONS] <CELEX> <DIR>
-
-Arguments:
-  <CELEX>  CELEX number of the act to fetch (e.g. 32024R1689)
-  <DIR>    Directory where the Formex files will be extracted
-
-Options:
-  -l, --lang <LANG>  Language code (ISO 639-2/B, e.g. eng, fra, deu) [default: eng]
-  -h, --help         Print help
-  -V, --version      Print version
-```
-
-```bash
-# Fetch the EU AI Act in English
-eur_lex_fetch 32024R1689 data/32024R1689
-# → Fetching 32024R1689 (eng)...
-# → Extracted to data/32024R1689
-# → Regulation (EU) 2024/1689 of the European Parliament …
-
-# Fetch the REACH Regulation in French
-eur_lex_fetch 32006R1907 data/32006R1907_fr --lang fra
-```
-
-The extracted directory will contain several `.fmx.xml` files:
-
-| Filename pattern | Content |
-|---|---|
-| `*.000101.fmx.xml` | Main act (title, preamble, enacting terms) |
-| `*.012401.fmx.xml` and above | Annexes, one file each (original acts) |
-| `*.doc.fmx.xml` | Registry listing all files in order |
-| `*.toc.fmx.xml` | Table of contents (not used by this tool) |
-
-Consolidated acts embed their annexes inline in the main file; no separate
-annex files are produced.
-
-> **Rate limiting**: keep concurrent requests below 5 per IP address.
-
----
-
-## Converting to JSON — `eur_lex_loader`
-
-Parses a local Formex directory (previously fetched with `eur_lex_fetch` or
-downloaded manually) and writes the act as JSON to stdout or a file. Can also
-fetch directly from Cellar without saving the Formex files locally.
-
-```
-eur_lex_loader [OPTIONS] [DIR]
-
-Arguments:
-  [DIR]  Path to a local Formex act directory
-
-Options:
-  -c, --celex <CELEX>  Fetch from EUR-Lex Cellar by CELEX number (e.g. 32022R2065)
-  -o, --output <FILE>  Write JSON output to FILE instead of stdout
-      --compact        Output compact JSON (default: pretty-printed)
-  -h, --help           Print help
-  -V, --version        Print version
-```
-
-`DIR` and `--celex` are mutually exclusive. Running with no arguments prints help.
-
-```bash
-# Fetch the DSA directly from EUR-Lex and pretty-print to stdout
-eur_lex_loader -c 32022R2065
-
-# Fetch the EU AI Act and write compact JSON to a file
-eur_lex_loader -c 32024R1689 --compact --output ai_act.json
-
-# Parse a previously downloaded act
-eur_lex_loader data/32024R1689
-
-# Write compact JSON to a file
-eur_lex_loader data/32024R1689 --compact --output ai_act.json
-
-# Pipe pretty-printed JSON into jq
-eur_lex_loader data/32024R1689 | jq '.preamble.recitals | length'
-```
-
-### Output format
-
-The tool outputs a single JSON object. The shape depends on whether the act is
-an original or a consolidated version.
-
-**Original acts** include a full preamble:
-
-```jsonc
-{
-  "metadata": {
-    "celex": "32024R1689",
-    "document_date": "20240613",
-    "legal_value": "REG",
-    "language": "EN",
-    "authors": ["PE", "CS"],
-    "eea_relevant": true,
-    "official_journal": { "collection": "L", "number": "1689", "date": "20240712", "language": "EN" },
-    "page_first": 1,
-    "page_last": 144,
-    "page_total": 144
-  },
-
-  "title": "Regulation (EU) 2024/1689 …",
-
-  "preamble": {
-    "init": "THE EUROPEAN PARLIAMENT AND THE COUNCIL …",
-    "visas": ["Having regard to …", "…"],
-    "recitals": [
-      { "number": "(1)", "text": "The purpose of this Regulation …" },
-      "…"
-    ],
-    "enacting_formula": "HAVE ADOPTED THIS REGULATION:"
-  },
-
-  "enacting_terms": { "…": "…" },
-  "annexes": [ "…" ],
-  "definitions": { "…": "…" }
-}
-```
-
-**Consolidated acts** have a slim preamble with no visas or recitals:
-
-```jsonc
-{
-  "metadata": { "celex": "32006R1907", "legal_value": "REG", "…": "…" },
-
-  "title": "Regulation (EC) No 1907/2006 …",
-
-  "preamble": {
-    "init": "THE EUROPEAN PARLIAMENT AND THE COUNCIL …",
-    "enacting_formula": "HAVE ADOPTED THIS REGULATION:"
-  },
-
-  "enacting_terms": { "…": "…" },
-  "annexes": [ "…" ]
-}
-```
-
-**Full output shape:**
-
-```jsonc
-{
-  "metadata": {
-    "celex": "32024R1689",          // CELEX identifier
-    "document_date": "20240613",    // signing/adoption date, YYYYMMDD
-    "legal_value": "REG",           // "REG" | "DIR" | "DEC" | …
-    "language": "EN",               // document language code
-    "authors": ["PE", "CS"],        // institutional authors
-    "eea_relevant": true,           // EEA relevance flag
-    "official_journal": {
-      "collection": "L",            // OJ series ("L" or "C")
-      "number": "1689",             // OJ issue number
-      "date": "20240712",           // publication date, YYYYMMDD
-      "language": "EN"              // language edition
-    },
-    "page_first": 1,
-    "page_last": 144,
-    "page_total": 144,
-    "prod_id": "20240610001",       // internal production ID (absent in older acts)
-    "fin_id": "789012"              // internal final ID (absent in older acts)
-  },
-
-  "title": "Regulation (EU) 2024/1689 …",
-
-  "preamble": {
-    "init": "THE EUROPEAN PARLIAMENT AND THE COUNCIL …",
-    "visas": ["Having regard to …", "…"],
-    "recitals": [
-      { "number": "(1)", "text": "The purpose of this Regulation …" },
-      "…"
-    ],
-    "enacting_formula": "HAVE ADOPTED THIS REGULATION:"
-  },
-
-  // enacting_terms.content is one of two variants:
-  // - "Chapters" for acts divided into <DIVISION> chapters (most acts)
-  // - "Articles" for flat acts whose articles sit directly in <ENACTING.TERMS>
-  "enacting_terms": {
-    "content": {
-      "Chapters": [
-      {
-        "title": "CHAPTER I",
-        "subtitle": "General provisions",
-        // A chapter contains either sections or articles directly:
-        "contents": {
-          "Articles": [
-            {
-              "number": "Article 1",
-              "title": "Subject matter",
-              // Article content is one of three variants:
-              // 1. Paragraphs — numbered <PARAG> wrappers (most common)
-              "content": { "Paragraphs": [
-                {
-                  "number": "1.",
-                  "alineas": [
-                    // A plain paragraph:
-                    { "Plain": "The purpose of this Regulation …" },
-                    // A <P> intro + <LIST> collapsed into a single List block:
-                    { "List": {
-                        "list_type": "alpha",
-                        "intro": "The following practices shall be prohibited:",
-                        "items": [
-                          // Simple item: number is its 1-based position in the list.
-                          { "number": 1, "content": { "Text": "…" } },
-                          // An item that itself has a nested list:
-                          { "number": 2, "content": { "List": {
-                              "list_type": "roman",
-                              "intro": "…",
-                              "items": [
-                                { "number": 1, "content": { "Text": "…" } }
-                              ]
-                          } } }
-                        ]
-                    } },
-                    // A table parsed from <GR.TBL> or a bare <TBL> element:
-                    { "Table": {
-                        "col_count": 3,
-                        "title": "Correlation table",   // omitted when absent
-                        "row_count": 2,
-                        "rows": [
-                          { "is_header": true, "cell_count": 3,
-                            "cells": [
-                              { "text": "Old directive", "is_header": true },
-                              { "text": "New directive", "is_header": true },
-                              { "text": "Remarks",       "is_header": true }
-                            ] },
-                          { "cell_count": 3,
-                            "cells": [
-                              { "text": "Article 1" },
-                              { "text": "Article 3" },
-                              { "text": "" }
-                            ] }
-                        ]
-                    } }
-                  ]
-                }
-              ] },
-              // 2. Alineas — bare <ALINEA> children, no <PARAG> wrapper
-              // "content": { "Alineas": [ { "content": [ { "Plain": "…" } ] } ] },
-              // 3. Subdivisions — <SUBDIV> thematic groups, each with a title
-              // "content": { "Subdivisions": [
-              //   {
-              //     "title": "NORMAL VALUE",
-              //     "content": { "Paragraphs": [
-              //       { "number": "1.", "alineas": [ { "content": [ { "Plain": "…" } ] } ] }
-              //     ] }
-              //   },
-              //   {
-              //     "title": "EXPORT PRICE",
-              //     "content": { "Paragraphs": [ "…" ] }
-              //   }
-              // ] }
-            }
-          ]
-        }
-      }
-      ]    // end Chapters array
-    }      // end content
-  },
-  // For a flat act (no chapters), enacting_terms looks like:
-  // "enacting_terms": { "content": { "Articles": [ { "number": "Article 1", "…": "…" } ] } }
-
-  "annexes": [
-    {
-      "number": "ANNEX I",
-      "subtitle": "List of harmonised standards …",
-      // Annexes with titled GR.SEQ sub-divisions use Sections:
-      "content": {
-        "Sections": [
-          {
-            "title": "Part A",
-            "alineas": [
-              { "Plain": "…" },
-              { "List": { "list_type": "alpha", "intro": "…", "items": [
-                  { "number": 1, "content": { "Text": "…" } }
-              ] } },
-              { "Table": { "col_count": 2, "row_count": 1,
-                           "rows": [ { "cell_count": 2,
-                                       "cells": [ { "text": "…" }, { "text": "…" } ] } ] } }
-            ]
-          }
-        ]
-      }
-      // Annexes with flat numbered items, plain text, or tables use Paragraphs —
-      // a flat Vec<Subparagraph> mixing Numbered (<NP>), Plain (<P>), List, Table:
-      // "content": {
-      //   "Paragraphs": [
-      //     { "Plain": "Introductory text …" },
-      //     { "Numbered": { "number": "1.", "alineas": [ { "Plain": "…" } ] } },
-      //     { "Numbered": { "number": "2.", "alineas": [ { "List": { "intro": "…", "items": [ { "number": 1, "content": { "Text": "…" } } ] } } ] } },
-      //     { "Table": { "col_count": 3, "row_count": 5, "rows": [ "…" ] } }
-      //   ]
-      // }
-    }
-  ],
-
-  // Present only when the act contains a Definitions article.
-  // Key: defined term. Value: full definition text as it appears in the act,
-  // including the term in curly quotes (e.g. "AI system" means …).
-  "definitions": {
-    "AI system": "\u201CAI system\u201D means a machine-based system …",
-    "high-risk AI system": "\u201Chigh-risk AI system\u201D means …",
-    "…": "…"
-  }
-}
-```
-
-`list_type` is omitted from `List` when the `<LIST>` element carries no `TYPE`
-attribute. `title` is omitted from `Table` when the `<TBL>` element has no
-`<TITLE>`. `is_header` is omitted from `Row` and `Cell` when `false`.
-`definitions` is omitted when the act has no Definitions article.
-
-In `metadata`, all fields except `eea_relevant` are optional and omitted from
-the JSON when absent. `prod_id` and `fin_id` are absent in older Formex files.
-`authors` is omitted when empty.
+`eur_lex_loader`. See [`eur-lex-utils/`](eur-lex-utils/) for usage.
 
 ---
 
@@ -432,18 +105,20 @@ the JSON when absent. `prod_id` and `fin_id` are absent in older Formex files.
 cargo test
 ```
 
-Unit tests live alongside their source modules. Integration tests validate the
-full parse of six different EU legislative acts against known structural counts:
+Unit tests live alongside their source modules in `eur-lex-lib/`. Integration
+tests in `eur-lex-lib/tests/` validate the full parse of eight EU legislative
+acts against known structural counts:
 
 | File | Act | Format | Articles | Recitals | Definitions | Tables |
 |---|---|---|---|---|---|---|
-| `tests/eu_ai_act.rs` | EU AI Act (`data/32024R1689`) | Original | 113 | 180 | 68 | — |
-| `tests/dsa.rs` | Digital Services Act (`data/32022R2065`) | Original | 93 | 156 | 27 | — |
-| `tests/dsma.rs` | Copyright in the Digital Single Market (`data/32019L0790`) | Original | 32 | 86 | 6 | — |
-| `tests/trademark_act.rs` | EU Trade Mark Regulation (`data/32017R1001`) | Original | 212 | 48 | — | — |
-| `tests/anti_dumping.rs` | Anti-Dumping Regulation (`data/32016R1036`) | Original | 25 | 32 | — | — |
-| `tests/reach.rs` | REACH Regulation (`data/32006R1907`) | Consolidated | 141 | — | — | ✓ |
-| `tests/consumer_directive.rs` | Consumer Rights Directive (`data/32011L0083`) | Consolidated | 36 | — | — | ✓ |
+| `eu_ai_act.rs` | EU AI Act (`32024R1689`) | Original | 113 | 180 | 68 | — |
+| `dsa.rs` | Digital Services Act (`32022R2065`) | Original | 93 | 156 | 27 | — |
+| `dsma.rs` | Copyright in the Digital Single Market (`32019L0790`) | Original | 32 | 86 | 6 | — |
+| `trademark_act.rs` | EU Trade Mark Regulation (`32017R1001`) | Original | 212 | 48 | — | — |
+| `anti_dumping.rs` | Anti-Dumping Regulation (`32016R1036`) | Original | 25 | 32 | — | — |
+| `anti_dumping_consolidated.rs` | Anti-Dumping Regulation (`02016R1036-20180608`) | Consolidated | — | — | — | — |
+| `reach.rs` | REACH Regulation (`32006R1907`) | Consolidated | 141 | — | — | ✓ |
+| `consumer_directive.rs` | Consumer Rights Directive (`32011L0083`) | Consolidated | 36 | — | — | ✓ |
 
 The table tests (✓) verify that `Subparagraph::Table` values are produced for
 annex tables in both Formex table encodings:
@@ -453,8 +128,7 @@ annex tables in both Formex table encodings:
 - **Consumer Rights Directive** (ANNEX II) — a correlation table wrapped in a
   `<GR.TBL>` element, which carries an optional title above the table.
 
-The integration tests require the Formex data to be present in the `data/`
-directory. All six fixtures are included in the repository.
+Test fixtures are in the `data/` directory at the workspace root.
 
 ---
 

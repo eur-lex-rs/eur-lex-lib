@@ -370,14 +370,21 @@ dependencies = [
 name = "eur-lex-lib"
 version = "0.1.0"
 dependencies = [
- "clap",
  "regex",
- "reqwest",
  "roxmltree",
  "serde",
+ "thiserror",
+]
+
+[[package]]
+name = "eur-lex-utils"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "eur-lex-lib",
+ "reqwest",
  "serde_json",
  "tempfile",
- "thiserror",
  "zip",
 ]
 

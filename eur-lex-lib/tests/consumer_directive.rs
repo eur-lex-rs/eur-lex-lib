@@ -11,7 +11,7 @@ use eur_lex_lib::model::{Act, AnnexContent, ChapterContents, EnactingTermsConten
 #[test]
 fn consumer_directive_structure() {
     let loaded =
-        load_act(Path::new("data/32011L0083")).expect("failed to load Consumer Rights Directive");
+        load_act(Path::new("../data/32011L0083")).expect("failed to load Consumer Rights Directive");
     let Act::Consolidated(act) = loaded else {
         panic!("Consumer Rights Directive should be a Consolidated act")
     };

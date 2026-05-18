@@ -13,7 +13,7 @@ use eur_lex_lib::model::{
 #[test]
 fn dsa_structure() {
     let act =
-        load_act(Path::new("data/32022R2065")).expect("failed to load DSA from data/32022R2065");
+        load_act(Path::new("../data/32022R2065")).expect("failed to load DSA from data/32022R2065");
     let Act::Regular(reg) = act else {
         panic!("DSA should be a Regular act")
     };
@@ -196,7 +196,7 @@ fn dsa_structure() {
 #[test]
 fn dsa_metadata() {
     let act =
-        load_act(Path::new("data/32022R2065")).expect("failed to load DSA from data/32022R2065");
+        load_act(Path::new("../data/32022R2065")).expect("failed to load DSA from data/32022R2065");
     let Act::Regular(reg) = act else {
         panic!("DSA should be a Regular act")
     };

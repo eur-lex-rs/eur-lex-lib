@@ -13,7 +13,7 @@ use eur_lex_lib::model::{
 
 #[test]
 fn trademark_act_structure() {
-    let act = load_act(Path::new("data/32017R1001"))
+    let act = load_act(Path::new("../data/32017R1001"))
         .expect("failed to load TrademarkAct from data/32017R1001");
     let Act::Regular(reg) = act else {
         panic!("TrademarkAct should be a Regular act")
@@ -171,7 +171,7 @@ fn trademark_act_structure() {
 
 #[test]
 fn trademark_act_recital_citations() {
-    let act = load_act(Path::new("data/32017R1001"))
+    let act = load_act(Path::new("../data/32017R1001"))
         .expect("failed to load TrademarkAct from data/32017R1001");
     let Act::Regular(reg) = act else {
         panic!("TrademarkAct should be a Regular act")
@@ -292,7 +292,7 @@ fn trademark_act_recital_citations() {
 
 #[test]
 fn trademark_act_metadata() {
-    let act = load_act(Path::new("data/32017R1001"))
+    let act = load_act(Path::new("../data/32017R1001"))
         .expect("failed to load Trademark Act from data/32017R1001");
     let Act::Regular(reg) = act else {
         panic!("Trademark Act should be a Regular act")

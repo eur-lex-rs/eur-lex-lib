@@ -11,7 +11,7 @@ use eur_lex_lib::model::{Act, AnnexContent, ChapterContents, EnactingTermsConten
 
 #[test]
 fn reach_regulation_structure() {
-    let loaded = load_act(Path::new("data/32006R1907"))
+    let loaded = load_act(Path::new("../data/32006R1907"))
         .expect("failed to load REACH regulation from data/32006R1907");
     let Act::Consolidated(reg) = loaded else {
         panic!("REACH regulation should be a Consolidated act")

@@ -12,7 +12,7 @@ use eur_lex_lib::model::{
 
 #[test]
 fn eu_ai_act_structure() {
-    let act = load_act(Path::new("data/32024R1689"))
+    let act = load_act(Path::new("../data/32024R1689"))
         .expect("failed to load EU AI Act from data/32024R1689");
     let Act::Regular(reg) = act else {
         panic!("EU AI Act should be a Regular act")
@@ -260,7 +260,7 @@ fn eu_ai_act_structure() {
 
 #[test]
 fn eu_ai_act_recital_citations() {
-    let act = load_act(Path::new("data/32024R1689"))
+    let act = load_act(Path::new("../data/32024R1689"))
         .expect("failed to load EU AI Act from data/32024R1689");
     let Act::Regular(reg) = act else {
         panic!("EU AI Act should be a Regular act")
@@ -389,7 +389,7 @@ fn eu_ai_act_recital_citations() {
 
 #[test]
 fn eu_ai_act_metadata() {
-    let act = load_act(Path::new("data/32024R1689"))
+    let act = load_act(Path::new("../data/32024R1689"))
         .expect("failed to load EU AI Act from data/32024R1689");
     let Act::Regular(reg) = act else {
         panic!("EU AI Act should be a Regular act")

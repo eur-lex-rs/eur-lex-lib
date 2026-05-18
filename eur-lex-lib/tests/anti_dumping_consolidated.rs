@@ -14,7 +14,7 @@ use eur_lex_lib::model::{Act, ArticleContent, EnactingTermsContent, SubdivisionC
 
 #[test]
 fn anti_dumping_consolidated_structure() {
-    let loaded = load_act(Path::new("data/02016R1036-20180608"))
+    let loaded = load_act(Path::new("../data/02016R1036-20180608"))
         .expect("failed to load consolidated Anti-Dumping Regulation");
     let Act::Consolidated(act) = loaded else {
         panic!("02016R1036-20180608 should be a Consolidated act")
