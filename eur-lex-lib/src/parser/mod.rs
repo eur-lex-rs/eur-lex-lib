@@ -25,6 +25,7 @@ mod text;
 pub use act::{parse_consolidated_act, parse_regular_act};
 pub use annex::{parse_annex, parse_cons_annex};
 pub(crate) use citation::extract_citations;
+pub(crate) use text::normalize_whitespace;
 
 use roxmltree::Node;
 

@@ -51,7 +51,7 @@ fn to_act_type(s: &str) -> CitedActType {
 fn text_without_notes(node: Node) -> String {
     let mut buf = String::new();
     collect_text_skip_notes(node, &mut buf);
-    buf.split_whitespace().collect::<Vec<_>>().join(" ")
+    super::normalize_whitespace(&buf)
 }
 
 /// Recursively collects text from `node`'s subtree, skipping `<NOTE>` elements entirely.
@@ -75,7 +75,7 @@ fn raw_text(node: Node) -> String {
             buf.push_str(t);
         }
     }
-    buf.split_whitespace().collect::<Vec<_>>().join(" ")
+    super::normalize_whitespace(&buf)
 }
 
 /// Returns the first `<REF.DOC.OJ>` element anywhere in `node`'s subtree.

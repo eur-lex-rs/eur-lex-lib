@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use serde::{Deserialize, Serialize}; // Deserialize needed for Subparagraph/ListBlock in tests
+use serde::{Deserialize, Serialize};
 
 /// The type of a cited EU legislative act.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
