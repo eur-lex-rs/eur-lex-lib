@@ -2,7 +2,7 @@ use crate::model::{
     Act, Alinea, Annex, AnnexContent, AnnexSection, Article, ArticleContent, Chapter,
     ChapterContents, ConsolidatedAct, ConsolidatedPreamble, EnactingTerms, EnactingTermsContent,
     Item, ItemContent, LegalParagraph, ListBlock, ListType, Metadata, PhysicalNumberedParagraph,
-    Preamble, RegularAct, Section, Subdivision, SubdivisionContent, Subparagraph, Table,
+    Preamble, Recital, RegularAct, Section, Subdivision, SubdivisionContent, Subparagraph, Table,
 };
 
 const STYLE: &str = r#"<style>
@@ -115,7 +115,7 @@ fn escape(text: &str) -> String {
 
 // ── Preamble ──────────────────────────────────────────────────────────────────
 
-fn render_preamble_section(p: &Preamble) -> String {
+pub(super) fn render_preamble_section(p: &Preamble) -> String {
     let mut out = "<section class=\"preamble\">\n<h2>Preamble</h2>\n".to_string();
     if !p.init.is_empty() {
         out.push_str(&format!("<p>{}</p>\n", escape(&p.init)));
@@ -128,11 +128,7 @@ fn render_preamble_section(p: &Preamble) -> String {
         out.push_str("</blockquote>\n");
     }
     for recital in &p.recitals {
-        out.push_str(&format!(
-            "<p><strong>{}</strong> {}</p>\n",
-            escape(&recital.number),
-            escape(&recital.text)
-        ));
+        out.push_str(&render_recital(recital));
     }
     if !p.enacting_formula.is_empty() {
         out.push_str(&format!(
@@ -142,6 +138,10 @@ fn render_preamble_section(p: &Preamble) -> String {
     }
     out.push_str("</section>\n");
     out
+}
+
+pub(super) fn render_recital(r: &Recital) -> String {
+    format!("<p><strong>{}</strong> {}</p>\n", escape(&r.number), escape(&r.text))
 }
 
 fn render_consolidated_preamble_section(p: &ConsolidatedPreamble) -> String {
@@ -161,7 +161,7 @@ fn render_consolidated_preamble_section(p: &ConsolidatedPreamble) -> String {
 
 // ── Enacting terms ────────────────────────────────────────────────────────────
 
-fn render_enacting_terms(et: &EnactingTerms) -> String {
+pub(super) fn render_enacting_terms(et: &EnactingTerms) -> String {
     let mut out = "<section class=\"enacting-terms\">\n".to_string();
     match &et.content {
         EnactingTermsContent::Chapters(chapters) => {
@@ -179,7 +179,7 @@ fn render_enacting_terms(et: &EnactingTerms) -> String {
     out
 }
 
-fn render_chapter(chapter: &Chapter) -> String {
+pub(super) fn render_chapter(chapter: &Chapter) -> String {
     let heading = match &chapter.subtitle {
         Some(sub) => format!("{} — {}", escape(&chapter.title), escape(sub)),
         None => escape(&chapter.title),
@@ -201,7 +201,7 @@ fn render_chapter(chapter: &Chapter) -> String {
     out
 }
 
-fn render_section(section: &Section) -> String {
+pub(super) fn render_section(section: &Section) -> String {
     let heading = match &section.subtitle {
         Some(sub) => format!("{} — {}", escape(&section.title), escape(sub)),
         None => escape(&section.title),
@@ -214,7 +214,7 @@ fn render_section(section: &Section) -> String {
     out
 }
 
-fn render_article(article: &Article) -> String {
+pub(super) fn render_article(article: &Article) -> String {
     let heading = match &article.title {
         Some(t) => format!("{} — {}", escape(&article.number), escape(t)),
         None => escape(&article.number),
@@ -390,7 +390,7 @@ fn render_annexes(annexes: &[Annex]) -> String {
     annexes.iter().map(render_annex).collect()
 }
 
-fn render_annex(annex: &Annex) -> String {
+pub(super) fn render_annex(annex: &Annex) -> String {
     let heading = match &annex.subtitle {
         Some(sub) => format!("{} — {}", escape(&annex.number), escape(sub)),
         None => escape(&annex.number),
@@ -412,7 +412,7 @@ fn render_annex(annex: &Annex) -> String {
     out
 }
 
-fn render_annex_section(section: &AnnexSection) -> String {
+pub(super) fn render_annex_section(section: &AnnexSection) -> String {
     let mut out = format!("<section class=\"annex-section\">\n<h3>{}</h3>\n", escape(&section.title));
     for sp in &section.alineas {
         out.push_str(&render_subparagraph(sp));

@@ -58,6 +58,8 @@
 /// Output formatters, enabled via the `fmt` feature.
 #[cfg(feature = "fmt")]
 pub mod fmt;
+#[cfg(feature = "fmt")]
+pub use fmt::{Format, Render};
 
 /// Error types for loading and parsing Formex acts.
 pub mod error;

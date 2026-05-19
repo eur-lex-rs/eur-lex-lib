@@ -2,7 +2,7 @@ use crate::model::{
     Act, Alinea, Annex, AnnexContent, AnnexSection, Article, ArticleContent, Chapter,
     ChapterContents, ConsolidatedAct, ConsolidatedPreamble, EnactingTerms, EnactingTermsContent,
     Item, ItemContent, LegalParagraph, ListBlock, ListType, Metadata, PhysicalNumberedParagraph,
-    Preamble, RegularAct, Section, Subdivision, SubdivisionContent, Subparagraph, Table,
+    Preamble, Recital, RegularAct, Section, Subdivision, SubdivisionContent, Subparagraph, Table,
 };
 
 // ── Top-level rendering ───────────────────────────────────────────────────────
@@ -79,7 +79,7 @@ fn format_date(raw: &str) -> String {
 
 // ── Preamble ──────────────────────────────────────────────────────────────────
 
-fn render_preamble(p: &Preamble) -> String {
+pub(super) fn render_preamble(p: &Preamble) -> String {
     let mut out = String::new();
     if !p.init.is_empty() {
         out.push_str(&p.init);
@@ -92,12 +92,16 @@ fn render_preamble(p: &Preamble) -> String {
         out.push('\n');
     }
     for recital in &p.recitals {
-        out.push_str(&format!("**{}** {}\n\n", recital.number, recital.text));
+        out.push_str(&render_recital(recital));
     }
     if !p.enacting_formula.is_empty() {
         out.push_str(&p.enacting_formula);
     }
     out
+}
+
+pub(super) fn render_recital(r: &Recital) -> String {
+    format!("**{}** {}\n\n", r.number, r.text)
 }
 
 fn render_consolidated_preamble(p: &ConsolidatedPreamble) -> String {
@@ -114,7 +118,7 @@ fn render_consolidated_preamble(p: &ConsolidatedPreamble) -> String {
 
 // ── Enacting terms ────────────────────────────────────────────────────────────
 
-fn render_enacting_terms(et: &EnactingTerms) -> String {
+pub(super) fn render_enacting_terms(et: &EnactingTerms) -> String {
     match &et.content {
         EnactingTermsContent::Chapters(chapters) => {
             chapters.iter().map(render_chapter).collect::<Vec<_>>().join("\n\n")
@@ -125,7 +129,7 @@ fn render_enacting_terms(et: &EnactingTerms) -> String {
     }
 }
 
-fn render_chapter(chapter: &Chapter) -> String {
+pub(super) fn render_chapter(chapter: &Chapter) -> String {
     let heading = match &chapter.subtitle {
         Some(sub) => format!("## {} — {sub}", chapter.title),
         None => format!("## {}", chapter.title),
@@ -141,7 +145,7 @@ fn render_chapter(chapter: &Chapter) -> String {
     format!("{heading}\n\n{body}")
 }
 
-fn render_section(section: &Section) -> String {
+pub(super) fn render_section(section: &Section) -> String {
     let heading = match &section.subtitle {
         Some(sub) => format!("### {} — {sub}", section.title),
         None => format!("### {}", section.title),
@@ -155,7 +159,7 @@ fn render_section(section: &Section) -> String {
     format!("{heading}\n\n{body}")
 }
 
-fn render_article(article: &Article) -> String {
+pub(super) fn render_article(article: &Article) -> String {
     let heading = match &article.title {
         Some(t) => format!("#### {} — {t}", article.number),
         None => format!("#### {}", article.number),
@@ -363,7 +367,7 @@ fn render_annexes(annexes: &[Annex]) -> String {
         .join("\n\n---\n\n")
 }
 
-fn render_annex(annex: &Annex) -> String {
+pub(super) fn render_annex(annex: &Annex) -> String {
     let heading = match &annex.subtitle {
         Some(sub) => format!("## {} — {sub}", annex.number),
         None => format!("## {}", annex.number),
@@ -383,7 +387,7 @@ fn render_annex(annex: &Annex) -> String {
     format!("{heading}\n\n{body}")
 }
 
-fn render_annex_section(section: &AnnexSection) -> String {
+pub(super) fn render_annex_section(section: &AnnexSection) -> String {
     let body = section
         .alineas
         .iter()

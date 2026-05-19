@@ -1,8 +1,10 @@
 use std::path::PathBuf;
 
 use clap::{Parser, ValueEnum};
+use eur_lex_lib::fmt::Format as LibFormat;
 use eur_lex_lib::loader::load_act;
 use eur_lex_lib::model::Act;
+use eur_lex_lib::Render;
 
 /// Print a Formex act in the chosen format.
 ///
@@ -43,12 +45,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         (None, None) => unreachable!("clap enforces arg_required_else_help"),
     };
 
-    let output = match cli.format {
-        Format::Md => eur_lex_lib::fmt::markdown::render_act(&act),
-        Format::Txt => eur_lex_lib::fmt::txt::render_act(&act),
-        Format::Html => eur_lex_lib::fmt::html::render_act(&act),
+    let lib_format = match cli.format {
+        Format::Md   => LibFormat::Markdown,
+        Format::Txt  => LibFormat::Txt,
+        Format::Html => LibFormat::Html,
     };
-    print!("{output}");
+    print!("{}", act.render(lib_format));
     Ok(())
 }
 
