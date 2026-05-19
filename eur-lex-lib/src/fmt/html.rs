@@ -831,6 +831,23 @@ mod tests {
     }
 
     #[test]
+    /// A consolidated act renders as a valid HTML5 document; the slim preamble has no
+    /// blockquote (no visas) and no recital `<strong>` markers.
+    fn consolidated_act_renders() {
+        let act = load_act(Path::new("../data/02016R1036-20180608"))
+            .expect("failed to load consolidated anti-dumping fixture");
+        let out = render_act(&act);
+        assert!(out.starts_with("<!DOCTYPE html>"));
+        assert!(out.contains("2016/1036"));
+        assert!(out.contains("<h2>Preamble</h2>"));
+        assert!(!out.contains("<blockquote>"), "consolidated act must not render visas");
+        assert!(!out.contains("<strong>(1)</strong>"), "consolidated act must not render recitals");
+        assert!(out.contains("<h4>Article 1"));
+        assert!(out.contains("<h2>ANNEX"));
+        assert!(out.ends_with("</html>\n"));
+    }
+
+    #[test]
     /// Plain text content in the DSA does not contain raw `<` or `>` outside of HTML tags.
     fn dsa_text_content_is_escaped() {
         let act = load_act(Path::new("../data/32022R2065")).expect("failed to load DSA fixture");

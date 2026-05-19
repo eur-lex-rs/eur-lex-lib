@@ -862,13 +862,27 @@ mod tests {
     }
 
     #[test]
-    fn trademark_act_consolidated_renders() {
+    fn trademark_act_renders() {
         let act =
             load_act(Path::new("../data/32017R1001")).expect("failed to load trademark fixture");
         let md = render_act(&act);
         assert!(md.starts_with("# Regulation (EU) 2017/1001"));
         assert!(md.contains("## Preamble"));
         assert!(md.contains("---"));
+    }
+
+    #[test]
+    /// A consolidated act renders without visa blockquotes or bold recital numbers.
+    fn consolidated_act_renders() {
+        let act = load_act(Path::new("../data/02016R1036-20180608"))
+            .expect("failed to load consolidated anti-dumping fixture");
+        let md = render_act(&act);
+        assert!(md.contains("2016/1036"));
+        assert!(md.contains("## Preamble"));
+        assert!(!md.contains("\n> "), "consolidated act must not render visa blockquotes");
+        assert!(!md.contains("**(1)**"), "consolidated act must not render recital numbers");
+        assert!(md.contains("#### Article 1"));
+        assert!(md.contains("## ANNEX"));
     }
 
     #[test]
